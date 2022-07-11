@@ -1,19 +1,22 @@
 {
-  "type": "package",
-  "name": "lobanov/elm-taskport",
-  "summary": "Easily call JavaScript APIs from Elm using the Task abstraction",
-  "version": "1.0.0",
-  "exposed-modules": [ "TaskPort" ],
-  "license": "Apache-2.0",
-  "source-directories": [
-    "src"
-  ],
-  "elm-version": "0.19.0 <= v < 0.20.0",
-  "dependencies": {
-    "elm/core": "1.0.0 <= v < 2.0.0",
-    "elm/json": "1.0.0 <= v < 2.0.0",
-    "elm/http": "2.0.0 <= v < 3.0.0"
-  },
-  "test-dependencies": {
-  }
+    "type": "package",
+    "name": "lobanov/elm-taskport",
+    "summary": "Easily call JavaScript APIs from Elm using the Task abstraction",
+    "license": "Apache-2.0",
+    "version": "1.0.0",
+    "exposed-modules": [
+        "TaskPort"
+    ],
+    "source-directories": [
+        "src"
+    ],
+    "elm-version": "0.19.0 <= v < 0.20.0",
+    "dependencies": {
+        "elm/core": "1.0.0 <= v < 2.0.0",
+        "elm/http": "2.0.0 <= v < 3.0.0",
+        "elm/json": "1.0.0 <= v < 2.0.0"
+    },
+    "test-dependencies": {
+        "elm-explorations/test": "1.2.2 <= v < 2.0.0"
+    }
 }
