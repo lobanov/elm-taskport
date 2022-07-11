@@ -21,11 +21,7 @@
     "webpack-cli": "^4.10.0"
   },
   "scripts": {
-<<<<<<< HEAD
     "test": "elm-test src/*.elm",
     "build": "npx webpack"
-=======
-    "test": "elm-test"
->>>>>>> 1f5fcf90e97ead3acefec071cfc8d121e738ded6
   }
 }
