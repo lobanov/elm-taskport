@@ -1,0 +1,11 @@
+{
+  "name": "elm-taskport",
+  "version": "1.0.0",
+  "description": "Companion Node.js module for Elm package allowing to call JavaScript APIs from Elm",
+  "repository": "https://github.com/lobanov/elm-taskport.git",
+  "author": "Igor Lobanov <1387948+lobanov@users.noreply.github.com>",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "elm-test": "^0.19.1-revision9"
+  }
+}
