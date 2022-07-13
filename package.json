@@ -16,13 +16,12 @@
     "dist/*.js"
   ],
   "devDependencies": {
-    "elm-test": "^0.19.1-revision9",
-    "webpack": "^5.73.0",
-    "webpack-cli": "^4.10.0"
+    "elm-test": "^0.19.1-revision9"
   },
   "scripts": {
     "test": "elm-test src/*.elm",
     "prebuild": "yarn test",
-    "build": "npx webpack"
-  }
+    "build": "uglifyjs -o dist/taskport.min.js js/taskport.js"
+  },
+  "dependencies": {}
 }
