@@ -85,3 +85,12 @@ TaskPort.callNoArgs "getWidgetsCount" Json.Decode.int Json.Decode.string
         List.map Json.Encode.int |>
         List.map (TaskPort.call "getWidgetName" Json.Decode.string Json.Decode.string)
 ```
+
+New version checklist
+---------------------
+
+* Update version number in `package.json`
+* Update version number in `elm.json`
+* Update version number in `src/TaskPort.elm`
+* Update version number in `js/taskport.js`
+* Run `yarn publish`
