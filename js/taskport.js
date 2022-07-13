@@ -1,5 +1,5 @@
 const TaskPort = {
-  MODULE_VERSION: "1.0.1"
+  MODULE_VERSION: "1.0.2"
 }
 
 /** Configure JavaScript environment on the current page to enable interop calls. */

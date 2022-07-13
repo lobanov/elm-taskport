@@ -1,6 +1,6 @@
 {
   "name": "elm-taskport",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Companion Node.js module for Elm package allowing to call JavaScript APIs from Elm",
   "repository": {
     "type": "git",
