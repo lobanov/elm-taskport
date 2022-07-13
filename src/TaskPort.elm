@@ -21,6 +21,9 @@ import Test exposing (..)
 import Expect
 import Dict
 
+moduleVersion : String
+moduleVersion = "1.0.1"
+
 {-| A structured error describing exactly how the interop call failed. You can use
 this to determine the best way to react to and recover from the problem.
 
@@ -37,7 +40,13 @@ type Error x
 These errors are generally not receoverable, but you can use them to allow the application to fail gracefully,
 or at least provide useful context for debugging.
 -}
-type InteropError = FunctionNotFound String | CannotDecodeResponse JD.Error String | CannotDecodeError JD.Error String | RuntimeError String
+type InteropError
+  = FunctionNotFound
+  | NotInstalled
+  | VersionMismatch
+  | CannotDecodeResponse JD.Error String
+  | CannotDecodeError JD.Error String
+  | RuntimeError String
 
 {-| Creates a Task encapsulating an invocation of a particular asyncronous JavaScript function.
 This function will usually be wrapped into a more specific one, which will partially apply it
@@ -95,24 +104,32 @@ buildHttpCall : String -> (JD.Decoder body) -> (JD.Decoder error) -> JE.Value ->
 buildHttpCall functionName bodyDecoder errorDecoder args =
   { method = "POST"
   , headers = [ Http.header "Accept" "application/json" ]
-  , url = "elmtaskport://" ++ functionName
+  , url = buildCallUrl functionName
   , body = Http.jsonBody args
   , resolver = Http.stringResolver (resolveResponse bodyDecoder errorDecoder)
   , timeout = Nothing
   }
+
+buildCallUrl : String -> String
+buildCallUrl functionName = "elmtaskport://" ++ functionName ++ "?v=" ++ moduleVersion
 
 resolveResponse : JD.Decoder a -> JD.Decoder x -> Http.Response String -> Result (Error x) a
 resolveResponse bodyDecoder errorDecoder res =
   case res of
     Http.BadUrl_ url -> runtimeError <| "bad url" ++ url
     Http.Timeout_ -> runtimeError "timeout"
-    Http.NetworkError_ -> runtimeError "network error"
+    Http.NetworkError_ -> Result.Err (InteropError NotInstalled)
     Http.BadStatus_ {statusCode} body -> 
-      if (statusCode == 500) then
+      if (statusCode == 400) then
+        Result.Err (InteropError VersionMismatch)
+      else if (statusCode == 404) then
+        Result.Err (InteropError FunctionNotFound)
+      else if (statusCode == 500) then
         case JD.decodeString errorDecoder (Debug.log "Parsing error body" body) of
           Result.Ok errorValue -> Result.Err (CallError errorValue)
           Result.Err decodeError -> Result.Err (InteropError <| CannotDecodeError decodeError body)
-      else runtimeError <| "unexpected status " ++ String.fromInt statusCode
+      else
+        runtimeError <| "unexpected status " ++ String.fromInt statusCode
     Http.GoodStatus_ _ body -> 
       case JD.decodeString bodyDecoder (Debug.log "Parsing response body" body) of
         Result.Ok returnValue -> Result.Ok returnValue
@@ -133,22 +150,32 @@ tests = describe "test"
         _ -> Expect.fail "Must produce an error"
   , test "buildHttpCall" <|
     \_ -> case buildHttpCall "function123" JD.string JD.string (JE.string "args") of
-        {method, url, timeout} -> (method, url, timeout) |> Expect.equal ( "POST", "elmtaskport://function123", Nothing )
+        {method, url, timeout} -> (method, url, timeout) |> Expect.equal ( "POST", buildCallUrl "function123", Nothing )
   , describe "resolveResponse"
     [ test "good response" <|
-      \_ -> let response = Http.GoodStatus_ { url = "elmtaskport://function123", statusCode = 200, statusText = "", headers = Dict.empty } "123"
+      \_ -> let response = Http.GoodStatus_ { url = buildCallUrl "fn", statusCode = 200, statusText = "", headers = Dict.empty } "123"
             in case resolveResponse JD.int JD.int response of
               Result.Ok (value) -> value |> Expect.equal 123
               _ -> Expect.fail "unexpected outcome for good response"
     , test "exception response" <|
-      \_ -> let response = Http.BadStatus_ { url = "elmtaskport://function123", statusCode = 500, statusText = "", headers = Dict.empty } "321"
+      \_ -> let response = Http.BadStatus_ { url = buildCallUrl "fn", statusCode = 500, statusText = "", headers = Dict.empty } "321"
             in case resolveResponse JD.int JD.int response of
               Result.Err (CallError value) -> value |> Expect.equal 321
               _ -> Expect.fail "unexpected outcome for exception response"
-    , test "interop failure" <|
+    , test "module version mismatch" <|
+      \_ -> let response = Http.BadStatus_ { url = buildCallUrl "fn", statusCode = 400, statusText = "", headers = Dict.empty } ""
+            in case resolveResponse JD.int JD.int response of
+              Result.Err (InteropError VersionMismatch) -> Expect.pass
+              _ -> Expect.fail "unexpected outcome for exception response"
+    , test "function not found" <|
+      \_ -> let response = Http.BadStatus_ { url = buildCallUrl "fn", statusCode = 404, statusText = "", headers = Dict.empty } ""
+            in case resolveResponse JD.int JD.int response of
+              Result.Err (InteropError FunctionNotFound) -> Expect.pass
+              _ -> Expect.fail "unexpected outcome for exception response"
+    , test "interop not installed" <|
       \_ -> let response = Http.NetworkError_
             in case resolveResponse JD.int JD.int response of
-              Result.Err (InteropError (RuntimeError msg)) -> Expect.pass
+              Result.Err (InteropError NotInstalled) -> Expect.pass
               _ -> Expect.fail "unexpected outcome for exception response"
     ]
   ]

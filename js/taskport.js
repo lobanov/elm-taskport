@@ -1,64 +1,73 @@
-(function () {
-	"use strict";
+const TaskPort = {
+  MODULE_VERSION: "1.0.1"
+}
 
-  var TaskPort = {
-    PROTOCOL: 'elmtaskport:'
-  }, _globals;
-
-  _globals = (function(){ return this || (0,eval)("this"); }());
-
-	if (typeof module !== "undefined" && module.exports) {
-		module.exports = TaskPort;
-	} else if (typeof define === "function" && define.amd) {
-		define(function(){return TaskPort;});
-	} else {
-		_globals.TaskPort = TaskPort;
-	}
-
-  TaskPort.install = function() {
-    XMLHttpRequest.prototype.__elm_taskport_open = XMLHttpRequest.prototype.open;
-    XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
-      console.log("XHR.open", {method, url, async, user, password, TaskPort});
-      const m = url.match(/elmtaskport:\/\/([\w]+)/);
-      if (m !== null) {
-        const functionName = m[1];
-        console.log("Function name:", functionName);
-        if (functionName in TaskPort && typeof TaskPort[functionName] === 'function') {
-          console.log("Found TaskPort function", functionName)
-        } else {
-          console.error("TaskPort function is not defined", functionName);
-        }
+/** Configure JavaScript environment on the current page to enable interop calls. */
+TaskPort.install = function() {
+  XMLHttpRequest.prototype.__elm_taskport_open = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
+    const m = url.match(/elmtaskport:\/\/([\w]+)\?v=(\d\.\d\.\d)/);
+    if (m !== null) {
+      const functionName = m[1];
+      const moduleVersion = m[2];
+      this.__elm_taskport_version = moduleVersion;
+      this.__elm_taskport_function_call = true;
+      if (functionName in TaskPort && typeof TaskPort[functionName] === 'function') {
         this.__elm_taskport_function = TaskPort[functionName];
-      }
-      this.__elm_taskport_open(method, url, async, user, password);
-    };
-
-    XMLHttpRequest.prototype.__elm_taskport_send = XMLHttpRequest.prototype.send;
-    XMLHttpRequest.prototype.send = function (body) {    
-      Object.defineProperty(this, "responseType", { writable: true });
-      Object.defineProperty(this, "response", { writable: true });
-      Object.defineProperty(this, "status", { writable: true });
-
-      console.log("XHR.send", {body, xhr: this});
-      if (this.__elm_taskport_function) {
-        const parsedBody = JSON.parse(body);
-        const promise = this.__elm_taskport_function(parsedBody);
-        promise.then((res) => {
-          console.log("Result", res);
-          this.responseType = 'json';
-          this.response = JSON.stringify(res);
-          this.status = 200;
-          this.dispatchEvent(new ProgressEvent('load'));
-        }).catch((err) => {
-          console.error("Error", err);
-          this.status = 500;
-          this.responseType = 'json';
-          this.response = JSON.stringify(err);
-          this.dispatchEvent(new ProgressEvent('error'));
-        });
       } else {
-        this.__elm_taskport_send(body);
+        console.error("TaskPort function is not registered", functionName);
       }
-    };    
+    }
+    this.__elm_taskport_open(method, url, async, user, password);
+  };
+
+  XMLHttpRequest.prototype.__elm_taskport_send = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.send = function (body) {
+    Object.defineProperty(this, "responseType", { writable: true });
+    Object.defineProperty(this, "response", { writable: true });
+    Object.defineProperty(this, "status", { writable: true });
+
+    if (this.__elm_taskport_function_call) {
+      if (this.__elm_taskport_version !== TaskPort.MODULE_VERSION) {
+        console.error("TaskPort version conflict. Elm-side is " + this.__elm_taskport_version
+          + ", but JavaScript-side is " + TaskPort.MODULE_VERSION + ". Don't forget that both sides must use the same version");
+
+        this.status = 400;
+        this.dispatchEvent(new ProgressEvent('error'));
+      } else if (this.__elm_taskport_function === undefined) {
+        this.status = 404;
+        this.dispatchEvent(new ProgressEvent('error'));
+      }
+
+      const parsedBody = JSON.parse(body);
+      const result = this.__elm_taskport_function(parsedBody);
+      const promise = Promise.resolve(result); // works for outright values as well as promises
+      promise.then((res) => {
+        this.responseType = 'json';
+        this.response = (res === undefined)? 'null' : JSON.stringify(res); // force null if the function does not return a value
+        this.status = 200;
+        this.dispatchEvent(new ProgressEvent('load'));
+      }).catch((err) => {
+        this.status = 500;
+        this.responseType = 'json';
+        this.response = JSON.stringify(err);
+        this.dispatchEvent(new ProgressEvent('error'));
+      });
+    } else {
+      this.__elm_taskport_send(body);
+    }
+  };    
+}
+
+/** Register given JavaScript function under a particular name and make it available for the interop. */
+TaskPort.register = function (name, fn) {
+  if (!name.match(/^\w+$/)) {
+    throw new Error("Invalid function name: " + name);
   }
-}());
+  if (name in TaskPort) {
+    throw new Error(name + " is already used");
+  }
+  TaskPort[name] = fn;
+}
+
+export default TaskPort;
