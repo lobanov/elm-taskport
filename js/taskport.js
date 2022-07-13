@@ -44,14 +44,14 @@
         promise.then((res) => {
           console.log("Result", res);
           this.responseType = 'json';
-          this.response = res;
+          this.response = JSON.stringify(res);
           this.status = 200;
           this.dispatchEvent(new ProgressEvent('load'));
         }).catch((err) => {
           console.error("Error", err);
           this.status = 500;
           this.responseType = 'json';
-          this.response = err;
+          this.response = JSON.stringify(err);
           this.dispatchEvent(new ProgressEvent('error'));
         });
       } else {
