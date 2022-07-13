@@ -36,10 +36,10 @@ TaskPort.install();
 </script>
 ```
 
-Substitute the actual version of the Elm package instead of `MODULE_VERSION`. The module will check that both sides use the correct version to prevent subtle and hard-to-find bugs.
+Substitute the actual version of the Elm package instead of `MODULE_VERSION`. The module will check that both sides use the correct version to prevent subtle and hard-to-find bugs. Of course, developers can choose to distribute the JS file with the rest of the application. In this case, simply save it locally, add to your codebase, and modify the path above accordingly.
 
-For Elm applications that have separate JavaScript files and use something like Webpack to produce minified builds, TaskPort can be
-inluded as a Node module.
+For Elm applications that have separate JavaScript files and use something like Webpack to produce minified builds, TaskPort JavaScript code can be
+included as a Node module.
 
 ```sh
 npm add --save elm-taskport # or yarn add elm-taskport --save
