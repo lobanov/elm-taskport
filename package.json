@@ -21,7 +21,8 @@
   "scripts": {
     "test": "elm-test src/*.elm",
     "prebuild": "yarn test",
-    "build": "uglifyjs -o dist/taskport.min.js js/taskport.js"
+    "build": "uglifyjs -o dist/taskport.min.js js/taskport.js",
+    "prepublish": "yarn build"
   },
   "dependencies": {}
 }
