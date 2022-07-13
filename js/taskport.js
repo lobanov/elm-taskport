@@ -18,10 +18,11 @@
   TaskPort.install = function() {
     XMLHttpRequest.prototype.__elm_taskport_open = XMLHttpRequest.prototype.open;
     XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
-      console.log("XHR.open", {method, url, async, user, password});
-      const {protocol, pathname} = new URL(url);
-      if (protocol === TaskPort.PROTOCOL) {
-        const functionName = pathname.slice(2);
+      console.log("XHR.open", {method, url, async, user, password, TaskPort});
+      const m = url.match(/elmtaskport:\/\/([\w]+)/);
+      if (m !== null) {
+        const functionName = m[1];
+        console.log("Function name:", functionName);
         if (functionName in TaskPort && typeof TaskPort[functionName] === 'function') {
           console.log("Found TaskPort function", functionName)
         } else {
