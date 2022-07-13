@@ -1,4 +1,17 @@
-module TaskPort exposing (Error(..), InteropError(..), call, tests)
+module TaskPort exposing (Error(..), InteropError(..), call, callNoArgs, tests)
+
+{-| This module allows to invoke JavaScript functions using the Elm's Task abstraction,
+which is convenient for chaining multiple API calls without introducing the complexity
+in the model of an Elm application.
+
+# Setting up
+Before TypePort can be used in Elm, it must be set up on JavaScript side.
+Refer to the [README](https://github.com/lobanov/elm-taskport/blob/main/README.md) for comprehensive instructions.
+
+# Usage
+@docs call, callNoArgs, Error
+
+-}
 
 import Task
 import Json.Encode as JE
@@ -27,11 +40,48 @@ or at least provide useful context for debugging.
 type InteropError = FunctionNotFound String | CannotDecodeResponse JD.Error String | CannotDecodeError JD.Error String | RuntimeError String
 
 {-| Creates a Task encapsulating an invocation of a particular asyncronous JavaScript function.
-This function will usually be wrapped into a more specific one, which will provide
-the details but curry the last parameter, so that it could invoked where necessary.
+This function will usually be wrapped into a more specific one, which will partially apply it
+providing the encoder and the decoders but curry the last parameter, so that it could invoked where necessary
+as a `args -> Task` function.
+
+Because interop calls can fail, produced task would likely need to be piped into a `Task.attempt` or handled further using `Task.onError`.
+
+Here is a simple example that creates a `Cmd` invoking a registered JavaScript function called `ping`
+and produces a message `GotPong` with a `Result`, containing either an `Ok` variant with a string (determined by the first decoder argument),
+or an `Err`, containing a `TaskPort.Error` describing what went wrong.
+
+    type Msg = GotPong (Result String String)
+
+    Task.attempt GotPong <|
+      TaskPort.call "ping" Json.Decode.string Json.Decode.string Json.Encode.string "hello"
+
+The `Task` abstraction allows to effectively compose chains of tasks without creating many intermediate message type, and
+designing the model to deal with partially completed chains. The following example shows how this might be used
+when working with a hypothetical 'chatty' JavaScript API, requiring to call `getWidgetsCount` function to obtain a number
+of widgets, and then call `getWidgetName` for each widget to obtain its name.
+
+    TaskPort.callNoArgs "getWidgetsCount" Json.Decode.int Json.Decode.string
+       |> Task.andThen \count -> Task.sequence <|
+        List.range 0 (count - 1) |>
+        List.map Json.Encode.int |>
+        List.map (TaskPort.call "getWidgetName" Json.Decode.string Json.Decode.string)
+
+The resulting task has type `Task (TaskPort.Error String) (List String)`, which could be attempted as a single command,
+which, if successful, provides a handy `List String` with all widget names.
 -}
-call : String -> (JD.Decoder body) -> (JD.Decoder error) -> JE.Value -> Task.Task (Error error) body
-call functionName bodyDecoder errorDecoder args = Http.task <| buildHttpCall functionName bodyDecoder errorDecoder args
+call : String -> (JD.Decoder body) -> (JD.Decoder error) -> (args -> JE.Value) -> args -> Task.Task (Error error) body
+call functionName bodyDecoder errorDecoder argsEncoder args = callWithJson functionName bodyDecoder errorDecoder <| argsEncoder args
+
+{-| Special version of the `call` that reduces amount of boilerplate code required when calling JavaScript functions
+that don't take any parameters. It is eqivalent of passing `Json.Encoder.null` into the `call`.
+
+    TaskPort.callNoArgs "getWidgetsCount" Json.Decode.int Json.Decode.string
+-}
+callNoArgs : String -> (JD.Decoder body) -> (JD.Decoder error) -> Task.Task (Error error) body
+callNoArgs functionName bodyDecoder errorDecoder = callWithJson functionName bodyDecoder errorDecoder JE.null
+
+callWithJson : String -> (JD.Decoder body) -> (JD.Decoder error) -> JE.Value -> Task.Task (Error error) body
+callWithJson functionName bodyDecoder errorDecoder json = Http.task <| buildHttpCall functionName bodyDecoder errorDecoder json
 
 type alias HttpTaskArgs x a =
   { method : String
