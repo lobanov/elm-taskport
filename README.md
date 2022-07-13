@@ -1,2 +1,87 @@
-# elm-taskport
-Elm module allowing to call JavaScript APIs from Elm using the Task abstraction
+elm-taskport
+============
+
+TaskPort is an Elm module allowing to call JavaScript APIs from Elm using the Task abstraction. This repository contains the Elm source for Elm package, as well as JavaScript source for the NPM companion package.
+
+**Note** this module is experimental and is not guaranteed to work in all browsers, even though reportedly it works in Chrome, Firefox, and Safari.
+
+Usage
+-----
+
+Before TypePort can be used in Elm, it must be set up on JavaScript side. There are a few steps that need to be done.
+
+### 1. Install TaskPort
+There are two ways to go about doing this depending on what is more appropriate for your application.
+
+For Elm applications that don't have much of HTML/JavaScript code, TaskPort can be included using a `<script>` tag.
+
+```html
+<script type="module">
+import TaskPort from 'https://unpkg.com/elm-taskport@MODULE_VERSION/dist/taskport.min.js';
+
+TaskPort.install();
+});
+</script>
+```
+
+Substitute the actual version of the Elm package instead of `MODULE_VERSION`. The module will check that both sides use the correct version to prevent subtle and hard-to-find bugs.
+
+For Elm applications that have separate JavaScript files and use something like Webpack to produce minified builds, TaskPort can be
+inluded as a Node module.
+
+```sh
+npm add --save elm-taskport # or yarn add elm-taskport --save
+```
+
+This will bring all necessary TaskPort JavaScript files into `node_modules` directory. Once that is done, you can include and install TaskPort in your `app.js` or `app.ts` file.
+
+```js
+import TaskPort from 'elm-taskport';
+
+TaskPort.install();
+```
+
+### 2. Register JavaScript functions for the interop
+
+Once TypePort is installed, you need to let it know what interop calls to expect and what to do when they are invoked.
+
+```js
+TaskPort.register("functionName", (args) => {
+    return /* value or a Promise */
+});
+```
+
+The type of `args` is determined entirely by the client Elm code, or, to be more precise, by the `argsEncoder` parameter passed to `TaskPort.call` function. Refer to Elm module documentation for details. This means that it is safe to deconstruct `args` as an object or a list if that is how the arguments are encoded.
+
+The function body can do anything a regular JavaScript function can do. The TaskPort interop logic will call `Promise.resolve()` on the returned value, so the function can return either a `Promise` or a simple value. For this reason, the function can be `async` and use `await` keyword.
+
+Note that you have to register interop functions before you call the Elm `init` if the application's `init` function returns `Cmd` using interop calls. Otherwise, you can register interop functions after you application was initialised.
+
+### 3. Make interop calls
+
+For simple no-argument calls use `TaskPort.callNoArgs`.
+```elm
+type Msg = GotWidgetsCount (Result String Int)
+
+Task.attempt GotWidgetsCount <|
+    TaskPort.callNoArgs "getWidgetsCount" Json.Decode.int Json.Decode.string
+```
+
+For functions that take arguments use `TaskPort.call`.
+
+```elm
+type Msg = GotWidgetName (Result String String)
+
+Task.attempt GotWidgetName <|
+    TaskPort.callNoArgs "getWidgetName" Json.Decode.string Json.Decode.string Json.Encode.int 0
+```
+
+You can use `Task.andThen`, `Task.sequence`, and other functions to chain multiple calls.
+
+```elm
+TaskPort.callNoArgs "getWidgetsCount" Json.Decode.int Json.Decode.string
+    |> Task.andThen \count -> Task.sequence <|
+        List.range 0 (count - 1) |>
+        List.map Json.Encode.int |>
+        List.map (TaskPort.call "getWidgetName" Json.Decode.string Json.Decode.string)
+```
