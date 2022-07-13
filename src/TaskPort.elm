@@ -125,13 +125,13 @@ resolveResponse bodyDecoder errorDecoder res =
       else if (statusCode == 404) then
         Result.Err (InteropError FunctionNotFound)
       else if (statusCode == 500) then
-        case JD.decodeString errorDecoder (Debug.log "Parsing error body" body) of
+        case JD.decodeString errorDecoder body of
           Result.Ok errorValue -> Result.Err (CallError errorValue)
           Result.Err decodeError -> Result.Err (InteropError <| CannotDecodeError decodeError body)
       else
         runtimeError <| "unexpected status " ++ String.fromInt statusCode
     Http.GoodStatus_ _ body -> 
-      case JD.decodeString bodyDecoder (Debug.log "Parsing response body" body) of
+      case JD.decodeString bodyDecoder body of
         Result.Ok returnValue -> Result.Ok returnValue
         Result.Err decodeError -> Result.Err (InteropError <| CannotDecodeResponse decodeError body)
 
