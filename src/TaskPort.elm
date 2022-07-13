@@ -9,7 +9,11 @@ Before TypePort can be used in Elm, it must be set up on JavaScript side.
 Refer to the [README](https://github.com/lobanov/elm-taskport/blob/main/README.md) for comprehensive instructions.
 
 # Usage
-@docs call, callNoArgs, Error
+@docs call, callNoArgs, Error, InteropError
+
+# Tests
+We are exposing tests suite to help test module's implementation details.
+@docs tests
 
 -}
 
@@ -22,7 +26,7 @@ import Expect
 import Dict
 
 moduleVersion : String
-moduleVersion = "1.0.2"
+moduleVersion = "1.0.0"
 
 {-| A structured error describing exactly how the interop call failed. You can use
 this to determine the best way to react to and recover from the problem.
@@ -142,6 +146,7 @@ runtimeError msg = Result.Err <|
       ("Runtime error in JavaScript interop: " ++ msg ++ ". JavaScript console may contain more information about the issue.")
 
 
+{-| This is an embedded tests suite allowing to test module-internal logic. No need to use this. -}
 tests : Test
 tests = describe "test"
   [ test "runtimeError" <|
