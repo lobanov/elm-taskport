@@ -12,7 +12,7 @@ The Elm Architecture (TEA) forces applications to only change state through crea
 
 However, there are situation when multiple effectful actions have to be carried out one after the other with some logic applied to the results in-between, but at the same time, the application state does not need to change until the sequence of actions is completed. For example, making a sequence of API calls over HTTP with some transformations applied to the intermediate results. If implemented using TEA paradigm, this would lead to unnecessarily fine-grained messages and increased complexity of the application model that needs to handle partially completed sequences of actions.
 
-Furthnately, Elm provides a very useful [Task module](https://package.elm-lang.org/packages/elm/core/latest/Task) that allows effectful actions to be chained together, and their results transformed before being passed to the next effectful action in a pure functional way. The most notable example of this is [Http.task](https://package.elm-lang.org/packages/elm/http/latest/Http#task) function, which allows very complex yet practical interactions with HTTP-based APIs to be concisely expressed in Elm.
+Fortunately, Elm provides a very useful [Task module](https://package.elm-lang.org/packages/elm/core/latest/Task) that allows effectful actions to be chained together, and their results transformed before being passed to the next effectful action in a pure functional way. The most notable example of this is [Http.task](https://package.elm-lang.org/packages/elm/http/latest/Http#task) function, which allows very complex yet practical interactions with HTTP-based APIs to be concisely expressed in Elm.
 
 Of course, not every API is available over HTTP. One could imagine a mechanism to extend Elm langauge to allow any effectful action to be wrapped into a `Task` to be executed in a controlled way. Unfortunately, Elm's existing JavaScript interoperability mechanisms are limited to one-way ports system, and do now allow creation of tasks.
 
@@ -94,6 +94,5 @@ You can use `Task.andThen`, `Task.sequence`, and other functions to chain multip
 TaskPort.callNoArgs "getWidgetsCount" Json.Decode.int Json.Decode.string
     |> Task.andThen \count -> Task.sequence <|
         List.range 0 (count - 1) |>
-        List.map Json.Encode.int |>
-        List.map (TaskPort.call "getWidgetName" Json.Decode.string Json.Decode.string)
+        List.map (TaskPort.call "getWidgetName" Json.Decode.string Json.Decode.string Json.Encode.int)
 ```
