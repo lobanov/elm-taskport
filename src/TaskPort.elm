@@ -63,20 +63,27 @@ Here is a simple example that creates a `Cmd` invoking a registered JavaScript f
 and produces a message `GotPong` with a `Result`, containing either an `Ok` variant with a string (determined by the first decoder argument),
 or an `Err`, containing a `TaskPort.Error` describing what went wrong.
 
-    type Msg = GotPong (Result String String)
+    type Msg = GotWidgetName (Result String String)
 
-    Task.attempt GotPong <|
-      TaskPort.call "ping" Json.Decode.string Json.Decode.string Json.Encode.string "hello"
+    TaskPort.call "getWidgetNameByIndex" Json.Decode.string Json.Decode.string Json.Encode.int 0
+        |> Task.attempt GotWidgetName
 
 The `Task` abstraction allows to effectively compose chains of tasks without creating many intermediate variants in the Msg type, and
 designing the model to deal with partially completed call chain. The following example shows how this might be used
 when working with a hypothetical 'chatty' JavaScript API, requiring to call `getWidgetsCount` function to obtain a number
 of widgets, and then call `getWidgetName` with each widget's index to obtain its name.
 
+    type Msg = GotWidgets (Result String (List String))
+    
     TaskPort.callNoArgs "getWidgetsCount" Json.Decode.int Json.Decode.string
-       |> Task.andThen \count -> Task.sequence <|
-        List.range 0 (count - 1) |>
-        List.map (TaskPort.call "getWidgetName" Json.Decode.string Json.Decode.string Json.Encode.int)
+        |> Task.andThen
+            (\count ->
+                List.range 0 (count - 1)
+                    |> List.map Json.Encode.int
+                    |> List.map (TaskPort.call "getWidgetNameByIndex" Json.Decode.string Json.Decode.string)
+                    |> Task.sequence
+            )
+        |> Task.attempt GotWidgets
 
 The resulting task has type `Task (TaskPort.Error String) (List String)`, which could be attempted as a single command,
 which, if successful, provides a handy `List String` with all widget names.
@@ -87,7 +94,10 @@ call functionName bodyDecoder errorDecoder argsEncoder args = callWithJson funct
 {-| Special version of the `call` that reduces amount of boilerplate code required when calling JavaScript functions
 that don't take any parameters. It is eqivalent of passing `Json.Encoder.null` into the `call`.
 
+    type Msg = GotWidgetsCount (Result String Int)
+
     TaskPort.callNoArgs "getWidgetsCount" Json.Decode.int Json.Decode.string
+        |> Task.attempt GotWidgetsCount
 -}
 callNoArgs : String -> (JD.Decoder body) -> (JD.Decoder error) -> Task.Task (Error error) body
 callNoArgs functionName bodyDecoder errorDecoder = callWithJson functionName bodyDecoder errorDecoder JE.null

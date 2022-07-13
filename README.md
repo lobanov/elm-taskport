@@ -1,7 +1,7 @@
 elm-taskport
 ============
 
-TaskPort is an Elm module allowing to call JavaScript APIs from Elm using the Task abstraction. This repository contains the Elm source for Elm package, as well as JavaScript source for the NPM companion package.
+TaskPort is an Elm module allowing to call JavaScript APIs from Elm using the Task abstraction. The same repository contains the source for the Elm package, as well as the source for the JavaScript NPM companion package.
 
 **Note** this module is experimental and is not guaranteed to work in all browsers, even though reportedly it works in Chrome, Firefox, and Safari.
 
@@ -75,8 +75,8 @@ For simple no-argument calls use `TaskPort.callNoArgs`.
 ```elm
 type Msg = GotWidgetsCount (Result String Int)
 
-Task.attempt GotWidgetsCount <|
-    TaskPort.callNoArgs "getWidgetsCount" Json.Decode.int Json.Decode.string
+TaskPort.callNoArgs "getWidgetsCount" Json.Decode.int Json.Decode.string
+    |> Task.attempt GotWidgetsCount
 ```
 
 For functions that take arguments use `TaskPort.call`.
@@ -84,15 +84,21 @@ For functions that take arguments use `TaskPort.call`.
 ```elm
 type Msg = GotWidgetName (Result String String)
 
-Task.attempt GotWidgetName <|
-    TaskPort.callNoArgs "getWidgetName" Json.Decode.string Json.Decode.string Json.Encode.int 0
+TaskPort.callNoArgs "getWidgetNameByIndex" Json.Decode.string Json.Decode.string Json.Encode.int 0
+    |> Task.attempt GotWidgetName
 ```
 
 You can use `Task.andThen`, `Task.sequence`, and other functions to chain multiple calls.
 
 ```elm
+type Msg = GotWidgets (Result String (List String))
+
 TaskPort.callNoArgs "getWidgetsCount" Json.Decode.int Json.Decode.string
-    |> Task.andThen \count -> Task.sequence <|
-        List.range 0 (count - 1) |>
-        List.map (TaskPort.call "getWidgetName" Json.Decode.string Json.Decode.string Json.Encode.int)
+    |> Task.andThen
+        (\count ->
+            List.range 0 (count - 1)
+                |> List.map Json.Encode.int
+                |> List.map (TaskPort.call "getWidgetNameByIndex" Json.Decode.string Json.Decode.string)
+                |> Task.sequence
+        )
 ```
