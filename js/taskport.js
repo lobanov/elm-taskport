@@ -41,7 +41,8 @@
 
       console.log("XHR.send", {body, xhr: this});
       if (this.__elm_taskport_function) {
-        const promise = this.__elm_taskport_function(body);
+        const parsedBody = JSON.parse(body);
+        const promise = this.__elm_taskport_function(parsedBody);
         promise.then((res) => {
           console.log("Result", res);
           this.responseType = 'json';
