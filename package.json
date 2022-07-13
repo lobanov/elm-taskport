@@ -11,6 +11,7 @@
   "bugs": {
     "url": "https://github.com/lobanov/elm-taskport/issues"
   },
+  "main": "js/taskport.js",
   "files": [
     "js/*.js",
     "dist/*.js"
