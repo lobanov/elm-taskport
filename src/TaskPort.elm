@@ -68,16 +68,15 @@ or an `Err`, containing a `TaskPort.Error` describing what went wrong.
     Task.attempt GotPong <|
       TaskPort.call "ping" Json.Decode.string Json.Decode.string Json.Encode.string "hello"
 
-The `Task` abstraction allows to effectively compose chains of tasks without creating many intermediate message type, and
-designing the model to deal with partially completed chains. The following example shows how this might be used
+The `Task` abstraction allows to effectively compose chains of tasks without creating many intermediate variants in the Msg type, and
+designing the model to deal with partially completed call chain. The following example shows how this might be used
 when working with a hypothetical 'chatty' JavaScript API, requiring to call `getWidgetsCount` function to obtain a number
-of widgets, and then call `getWidgetName` for each widget to obtain its name.
+of widgets, and then call `getWidgetName` with each widget's index to obtain its name.
 
     TaskPort.callNoArgs "getWidgetsCount" Json.Decode.int Json.Decode.string
        |> Task.andThen \count -> Task.sequence <|
         List.range 0 (count - 1) |>
-        List.map Json.Encode.int |>
-        List.map (TaskPort.call "getWidgetName" Json.Decode.string Json.Decode.string)
+        List.map (TaskPort.call "getWidgetName" Json.Decode.string Json.Decode.string Json.Encode.int)
 
 The resulting task has type `Task (TaskPort.Error String) (List String)`, which could be attempted as a single command,
 which, if successful, provides a handy `List String` with all widget names.
