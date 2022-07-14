@@ -17,7 +17,8 @@
     "dist/*.js"
   ],
   "devDependencies": {
-    "elm-test": "^0.19.1-revision9"
+    "elm-test": "^0.19.1-revision9",
+    "xmlhttprequest": "^1.8.0"
   },
   "scripts": {
     "test": "elm-test src/*.elm",

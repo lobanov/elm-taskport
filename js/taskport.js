@@ -12,9 +12,12 @@ function callAndReturnPromise(fn, args) {
 }
 
 /** Configure JavaScript environment on the current page to enable interop calls. */
-TaskPort.install = function() {
-  XMLHttpRequest.prototype.__elm_taskport_open = XMLHttpRequest.prototype.open;
-  XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
+TaskPort.install = function(xhrProto) {
+  if (xhrProto === undefined) {
+    xhrProto = XMLHttpRequest.prototype;
+  }
+  xhrProto.__elm_taskport_open = xhrProto.open;
+  xhrProto.open = function (method, url, async, user, password) {
     const m = url.match(/elmtaskport:\/\/([\w]+)\?v=(\d\.\d\.\d)/);
     if (m !== null) {
       const functionName = m[1];
@@ -30,8 +33,8 @@ TaskPort.install = function() {
     this.__elm_taskport_open(method, url, async, user, password);
   };
 
-  XMLHttpRequest.prototype.__elm_taskport_send = XMLHttpRequest.prototype.send;
-  XMLHttpRequest.prototype.send = function (body) {
+  xhrProto.__elm_taskport_send = xhrProto.send;
+  xhrProto.send = function (body) {
     Object.defineProperty(this, "responseType", { writable: true });
     Object.defineProperty(this, "response", { writable: true });
     Object.defineProperty(this, "status", { writable: true });

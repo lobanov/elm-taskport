@@ -1,6 +1,10 @@
-const script = require('./build/elm.js');
+const TaskPort = require('../js/taskport.js');
+const XMLHttpRequest = require('xmlhttprequest');
 
-const app = script.Elm.Main.init({ flags: "" });
+TaskPort.install(XMLHttpRequest.prototype);
+
+const app = require('./build/elm.cjs').Main.init({ flags: "" });
+
 app.ports.reportTestResult.subscribe(function (result) {
     console.log(result);
 });
