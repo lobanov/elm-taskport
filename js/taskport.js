@@ -2,6 +2,15 @@ const TaskPort = {
   MODULE_VERSION: "1.0.2"
 }
 
+/** Returns a promise regardless of the return value of the fn */
+function callAndReturnPromise(fn, args) {
+  try {
+    return Promise.resolve(fn(args));
+  } catch (e) {
+    return Promise.reject(e);
+  }
+}
+
 /** Configure JavaScript environment on the current page to enable interop calls. */
 TaskPort.install = function() {
   XMLHttpRequest.prototype.__elm_taskport_open = XMLHttpRequest.prototype.open;
@@ -40,8 +49,7 @@ TaskPort.install = function() {
       }
 
       const parsedBody = JSON.parse(body);
-      const result = this.__elm_taskport_function(parsedBody);
-      const promise = Promise.resolve(result); // works for outright values as well as promises
+      const promise = callAndReturnPromise(this.__elm_taskport_function, parsedBody);
       promise.then((res) => {
         this.responseType = 'json';
         this.response = (res === undefined)? 'null' : JSON.stringify(res); // force null if the function does not return a value
