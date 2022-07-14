@@ -21,8 +21,11 @@
     "xmlhttprequest": "^1.8.0"
   },
   "scripts": {
-    "test": "elm-test src/*.elm",
-    "prebuild": "yarn test",
+    "build-test": "(cd test && elm make src/Main.elm --output build/elm.js)",
+    "unit-test": "elm-test src/*.elm",
+    "prenode-test": "yarn build-test",
+    "node-test": "node test/node-test.js",
+    "prebuild": "yarn unit-test && yarn node-test",
     "build": "uglifyjs -o dist/taskport.min.js js/taskport.js",
     "prepublish": "yarn build"
   },
