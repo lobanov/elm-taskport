@@ -1,6 +1,6 @@
-const TaskPort = {
-  MODULE_VERSION: "1.0.2"
-}
+const MODULE_VERSION = "1.0.2";
+
+const functions = {};
 
 /** Returns a promise regardless of the return value of the fn */
 function callAndReturnPromise(fn, args) {
@@ -12,7 +12,7 @@ function callAndReturnPromise(fn, args) {
 }
 
 /** Configure JavaScript environment on the current page to enable interop calls. */
-TaskPort.install = function(xhrProto) {
+function install(xhrProto) {
   if (xhrProto === undefined) {
     xhrProto = XMLHttpRequest.prototype;
   }
@@ -24,8 +24,8 @@ TaskPort.install = function(xhrProto) {
       const moduleVersion = m[2];
       this.__elm_taskport_version = moduleVersion;
       this.__elm_taskport_function_call = true;
-      if (functionName in TaskPort && typeof TaskPort[functionName] === 'function') {
-        this.__elm_taskport_function = TaskPort[functionName];
+      if (functionName in functions && typeof functions[functionName] === 'function') {
+        this.__elm_taskport_function = functions[functionName];
       } else {
         console.error("TaskPort function is not registered", functionName);
       }
@@ -40,15 +40,15 @@ TaskPort.install = function(xhrProto) {
     Object.defineProperty(this, "status", { writable: true });
 
     if (this.__elm_taskport_function_call) {
-      if (this.__elm_taskport_version !== TaskPort.MODULE_VERSION) {
+      if (this.__elm_taskport_version !== MODULE_VERSION) {
         console.error("TaskPort version conflict. Elm-side is " + this.__elm_taskport_version
-          + ", but JavaScript-side is " + TaskPort.MODULE_VERSION + ". Don't forget that both sides must use the same version");
+          + ", but JavaScript-side is " + MODULE_VERSION + ". Don't forget that both sides must use the same version");
 
         this.status = 400;
-        this.dispatchEvent(new ProgressEvent('error'));
+        this.dispatchEvent('error');
       } else if (this.__elm_taskport_function === undefined) {
         this.status = 404;
-        this.dispatchEvent(new ProgressEvent('error'));
+        this.dispatchEvent('error');
       }
 
       const parsedBody = JSON.parse(body);
@@ -57,12 +57,12 @@ TaskPort.install = function(xhrProto) {
         this.responseType = 'json';
         this.response = (res === undefined)? 'null' : JSON.stringify(res); // force null if the function does not return a value
         this.status = 200;
-        this.dispatchEvent(new ProgressEvent('load'));
+        this.dispatchEvent('load');
       }).catch((err) => {
         this.status = 500;
         this.responseType = 'json';
         this.response = JSON.stringify(err);
-        this.dispatchEvent(new ProgressEvent('error'));
+        this.dispatchEvent('error');
       });
     } else {
       this.__elm_taskport_send(body);
@@ -71,14 +71,34 @@ TaskPort.install = function(xhrProto) {
 }
 
 /** Register given JavaScript function under a particular name and make it available for the interop. */
-TaskPort.register = function (name, fn) {
+function register(name, fn) {
   if (!name.match(/^\w+$/)) {
     throw new Error("Invalid function name: " + name);
   }
-  if (name in TaskPort) {
+  if (name in functions) {
     throw new Error(name + " is already used");
   }
-  TaskPort[name] = fn;
+  functions[name] = fn;
 }
 
-export default TaskPort;
+
+(function (root, factory) {
+  if (typeof define === 'function' && define.amd) {
+      // AMD. Register as an anonymous module.
+      define([], factory);
+  } else if (typeof module === 'object' && module.exports) {
+      // Node. Does not work with strict CommonJS, but
+      // only CommonJS-like environments that support module.exports,
+      // like Node.
+      module.exports = factory();
+  } else {
+      // Browser globals (root is window)
+      root.returnExports = factory();
+}
+}(typeof self !== 'undefined' ? self : this, function () {
+
+  return {
+    install,
+    register
+  };
+}));
