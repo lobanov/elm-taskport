@@ -18,6 +18,10 @@
         console.log(result);
     });
 
+    app.ports.completed.subscribe(function () {
+      console.log("completed");
+    })
+
     app.ports.start.send("");
   </script>
 </body>

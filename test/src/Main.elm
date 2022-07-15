@@ -7,6 +7,7 @@ import Json.Encode as JE
 import Json.Decode as JD
 
 port reportTestResult : TestResult -> Cmd msg
+port completed : String -> Cmd msg
 port start : (String -> msg) -> Sub msg
 
 type alias TestResult = { testId : String, pass : Bool, details : String }
@@ -44,7 +45,9 @@ update msg model =
         ] |> Cmd.batch
 
       Case3 testId res ->
-        expect testId (ppDict ppString ppString) identity (Dict.fromList [ ( "key1", "value1" ), ( "key2", "value2" ) ]) res |> reportTestResult
+        [ expect testId (ppDict ppString ppString) identity (Dict.fromList [ ( "key1", "value1" ), ( "key2", "value2" ) ]) res |> reportTestResult
+        , completed "OK"
+        ] |> Cmd.batch
   )
 
 ppString : String -> String
