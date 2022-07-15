@@ -7,15 +7,19 @@
   <script type="text/javascript" src="fixture.js"></script>
 </head>
 <body>
-  <div id="elm-node"></div>
+  <div id="results"></div>
   <script>
     TaskPort.install();
     TaskPortFixture.register(TaskPort);
 
     const app = Elm.Main.init({ flags: "" });
 
-    app.ports.reportTestResult.subscribe(function (result) {
-        console.log(result);
+    app.ports.reportTestResult.subscribe(function ({testId, pass, details}) {
+      const div = document.getElementById('results');
+      const parser = new DOMParser();
+      const status = pass? '<span style="background-color: green">PASS</span>' : '<span style="background-color: red">FAIL</span> ' + details
+      const e = parser.parseFromString('<p>' + testId + ': ' + status + '</p>', "text/html");
+      div.appendChild(e.documentElement);
     });
 
     app.ports.completed.subscribe(function () {
