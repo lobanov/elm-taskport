@@ -27,6 +27,8 @@
     "node-test": "node test/node-test.js",
     "prebuild": "yarn unit-test && yarn node-test",
     "build": "uglifyjs -o dist/taskport.min.js js/taskport.js",
+    "preweb-test": "yarn build && cp dist/taskport.min.js test/build",
+    "web-test": "(cd test && elm reactor)",
     "prepublish": "yarn build"
   },
   "dependencies": {}

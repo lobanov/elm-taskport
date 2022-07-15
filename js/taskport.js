@@ -33,6 +33,12 @@ function install(xhrProto) {
     this.__elm_taskport_open(method, url, async, user, password);
   };
 
+  if (typeof ProgressEvent === 'function') {
+    xhrProto.__elm_taskport_dispatch_event = function (eventName) { this.dispatchEvent(new ProgressEvent(eventName)) };
+  } else {
+    xhrProto.__elm_taskport_dispatch_event = xhrProto.dispatchEvent;
+  }
+
   xhrProto.__elm_taskport_send = xhrProto.send;
   xhrProto.send = function (body) {
     Object.defineProperty(this, "responseType", { writable: true });
@@ -45,10 +51,10 @@ function install(xhrProto) {
           + ", but JavaScript-side is " + MODULE_VERSION + ". Don't forget that both sides must use the same version");
 
         this.status = 400;
-        this.dispatchEvent('error');
+        this.__elm_taskport_dispatch_event('error');
       } else if (this.__elm_taskport_function === undefined) {
         this.status = 404;
-        this.dispatchEvent('error');
+        this.__elm_taskport_dispatch_event('error');
       }
 
       const parsedBody = JSON.parse(body);
@@ -57,12 +63,12 @@ function install(xhrProto) {
         this.responseType = 'json';
         this.response = (res === undefined)? 'null' : JSON.stringify(res); // force null if the function does not return a value
         this.status = 200;
-        this.dispatchEvent('load');
+        this.__elm_taskport_dispatch_event('load');
       }).catch((err) => {
         this.status = 500;
         this.responseType = 'json';
         this.response = JSON.stringify(err);
-        this.dispatchEvent('error');
+        this.__elm_taskport_dispatch_event('error');
       });
     } else {
       this.__elm_taskport_send(body);

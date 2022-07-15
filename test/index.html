@@ -1,0 +1,34 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script type="text/javascript" src="build/elm.js"></script>
+  <script type="text/javascript" src="build/taskport.min.js"></script>
+</head>
+<body>
+  <div id="elm-node"></div>
+  <script>
+    TaskPort.install();
+
+    TaskPort.register("noArgs", function() {
+    return "string value";
+    });
+
+    TaskPort.register("noArgs2", function() {
+        return [ 'value1', 'value2' ];
+    });
+
+    TaskPort.register("noArgs3", function() {
+        return { key1: 'value1', key2: 'value2' }
+    });
+
+    const app = Elm.Main.init({ flags: "" });
+
+    app.ports.reportTestResult.subscribe(function (result) {
+        console.log(result);
+    });
+
+    app.ports.start.send("");
+  </script>
+</body>
+</html>
