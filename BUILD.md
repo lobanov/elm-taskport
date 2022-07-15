@@ -2,8 +2,16 @@
 
 ## Compile and test everything
 
+Build and test automatically in Node.
+
 ```sh
 yarn build
+```
+
+Build test website and check manually in browsers.
+
+```sh
+yarn web-test
 ```
 
 ## Determine new version number for Elm package
