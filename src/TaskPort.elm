@@ -26,7 +26,7 @@ import Expect
 import Dict
 
 moduleVersion : String
-moduleVersion = "1.0.2"
+moduleVersion = "1.0.3"
 
 {-| A structured error describing exactly how the interop call failed. You can use
 this to determine the best way to react to and recover from the problem.
