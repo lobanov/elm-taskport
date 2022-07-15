@@ -1,4 +1,5 @@
 const TaskPort = require('../js/taskport.js');
+const TaskPortFixture = require('./fixture.js');
 const { XMLHttpRequest } = require('xmlhttprequest');
 const { Elm } = require('./build/elm.js');
 
@@ -7,17 +8,7 @@ global.XMLHttpRequest = function() {
     TaskPort.install(this);
 }
 
-TaskPort.register("noArgs", function() {
-  return "string value";
-});
-
-TaskPort.register("noArgs2", function() {
-    return [ 'value1', 'value2' ];
-});
-
-TaskPort.register("noArgs3", function() {
-    return { key1: 'value1', key2: 'value2' }
-});
+TaskPortFixture.register(TaskPort);
 
 const app = Elm.Main.init({ flags: "" });
 
