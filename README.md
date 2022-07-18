@@ -21,7 +21,7 @@ This module aims to solve this problem by allowing any JavaScript function to be
 Usage
 -----
 
-Before TypePort can be used in Elm, it must be set up on JavaScript side. There are a few steps that need to be done.
+Before TaskPort can be used in Elm, it must be set up on JavaScript side. There are a few steps that need to be done.
 
 ### 1. Include TaskPort JavaScript companion package
 There are two ways to go about doing this depending on what is more appropriate for your application.
