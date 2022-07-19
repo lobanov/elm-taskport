@@ -51,10 +51,10 @@ function install(xhrProto) {
           + ", but JavaScript-side is " + MODULE_VERSION + ". Don't forget that both sides must use the same version");
 
         this.status = 400;
-        this.__elm_taskport_dispatch_event('error');
+        this.__elm_taskport_dispatch_event('load');
       } else if (this.__elm_taskport_function === undefined) {
         this.status = 404;
-        this.__elm_taskport_dispatch_event('error');
+        this.__elm_taskport_dispatch_event('load');
       } else {
         const parsedBody = JSON.parse(body);
         const promise = callAndReturnPromise(this.__elm_taskport_function, parsedBody);
@@ -67,7 +67,7 @@ function install(xhrProto) {
           this.status = 500;
           this.responseType = 'json';
           this.response = JSON.stringify(err);
-          this.__elm_taskport_dispatch_event('error');
+          this.__elm_taskport_dispatch_event('load');
         });  
       }
     } else {
