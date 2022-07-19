@@ -25,6 +25,8 @@ type Msg
   | Case2 String (Result (TaskPort.Error String) (List String))
   | Case3 String (Result (TaskPort.Error String) (Dict String String))
   | Case4 String (Result (TaskPort.Error String) String)
+  | Case5 String (Result (TaskPort.Error String) String)
+  | Case6 String (Result (TaskPort.Error String) String)
 
 type alias Model = { }
 
@@ -52,6 +54,16 @@ update msg model =
 
       Case4 testId res ->
         [ expectInteropError testId TaskPort.FunctionNotFound res |> reportTestResult
+        , TaskPort.callNoArgs "noArgsAsyncResolve" JD.string JD.string |> Task.attempt (Case5 "test5")
+        ] |> Cmd.batch
+
+      Case5 testId res ->
+        [ expect testId identity identity "success" res |> reportTestResult
+        , TaskPort.callNoArgs "noArgsAsyncReject" JD.string JD.string |> Task.attempt (Case6 "test6")
+        ] |> Cmd.batch
+
+      Case6 testId res ->
+        [ expectCallError testId identity "expected" res |> reportTestResult
         , completed "OK"
         ] |> Cmd.batch
   )
@@ -79,6 +91,20 @@ expect testId valuePrinter errorPrinter expectedValue result =
     
     Result.Err (TaskPort.CallError error) ->
       TestResult testId False <| "CallError: " ++ errorPrinter error
+
+expectCallError : String -> (error -> String) -> error -> Result (TaskPort.Error error) value -> TestResult
+expectCallError testId errorPrinter expectedError result =
+  case result of
+    Result.Ok actualValue -> TestResult testId False "Expected error"
+    
+    Result.Err (TaskPort.InteropError err) ->
+      TestResult testId False (TaskPort.interopErrorToString err)
+    
+    Result.Err (TaskPort.CallError error) ->
+      if (error == expectedError) then
+        TestResult testId True ""
+      else
+        TestResult testId False ("CallError: " ++ errorPrinter error)
 
 expectInteropError : String -> TaskPort.InteropError -> Result (TaskPort.Error error) value -> TestResult
 expectInteropError testId expectedError result =

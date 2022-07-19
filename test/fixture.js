@@ -11,6 +11,18 @@ function register(taskport) {
   taskport.register("noArgs3", function() {
     return { key1: 'value1', key2: 'value2' }
   });  
+
+  taskport.register("noArgsAsyncResolve", function() {
+    return new Promise((resolve) => {
+      setTimeout(() => resolve("success"), 100);
+    });
+  });
+
+  taskport.register("noArgsAsyncReject", function() {
+    return new Promise((_, reject) => {
+      setTimeout(() => reject("expected"), 100);
+    });
+  });
 }
 
 (function (root, factory) {
