@@ -21,15 +21,15 @@
     "xmlhttprequest": "^1.8.0"
   },
   "scripts": {
-    "build-test": "(cd test && elm make src/Main.elm --output build/elm.js)",
     "unit-test": "elm-test src/*.elm",
-    "prenode-test": "yarn build-test",
-    "node-test": "node test/node-test.js",
-    "prebuild": "yarn unit-test && yarn node-test",
+    "prebuild": "yarn unit-test",
     "build": "uglifyjs -o dist/taskport.min.js js/taskport.js",
+    "build-test": "(cd test && elm make src/Main.elm --output build/elm.js)",
+    "prenode-test": "yarn build && yarn build-test",
+    "node-test": "node test/node-test.js",
     "preweb-test": "yarn build && cp dist/taskport.min.js test/build",
     "web-test": "(cd test && elm reactor)",
-    "prepublish": "yarn build"
+    "prepublish": "yarn node-test"
   },
   "dependencies": {}
 }
