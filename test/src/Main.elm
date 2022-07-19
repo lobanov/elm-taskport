@@ -24,6 +24,7 @@ type Msg
   | Case1 String (Result (TaskPort.Error String) String)
   | Case2 String (Result (TaskPort.Error String) (List String))
   | Case3 String (Result (TaskPort.Error String) (Dict String String))
+  | Case4 String (Result (TaskPort.Error String) String)
 
 type alias Model = { }
 
@@ -33,7 +34,7 @@ init _ = ( { }, Cmd.none )
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model = 
   ( model
-  , case msg of
+  , case {-- Debug.log "handling msg" --} msg of
       Start _ -> TaskPort.callNoArgs "noArgs" JD.string JD.string |> Task.attempt (Case1 "test1")
       Case1 testId res ->
         [ expect testId identity identity "string value" res |> reportTestResult
@@ -46,6 +47,11 @@ update msg model =
 
       Case3 testId res ->
         [ expect testId (ppDict ppString ppString) identity (Dict.fromList [ ( "key1", "value1" ), ( "key2", "value2" ) ]) res |> reportTestResult
+        , TaskPort.callNoArgs "notRegistered" JD.string JD.string |> Task.attempt (Case4 "test4")
+        ] |> Cmd.batch
+
+      Case4 testId res ->
+        [ expectInteropError testId TaskPort.FunctionNotFound res |> reportTestResult
         , completed "OK"
         ] |> Cmd.batch
   )
@@ -61,7 +67,7 @@ ppDict ppKey ppValue dict = "{ " ++ String.join ", " (List.map (\( k, v ) -> ppK
 
 expect : String -> (value -> String) -> (error -> String) -> value -> Result (TaskPort.Error error) value -> TestResult
 expect testId valuePrinter errorPrinter expectedValue result =
-  case result of
+  case {-- Debug.log "received result" --} result of
     Result.Ok actualValue ->
       if (actualValue == expectedValue) then
         TestResult testId True ""
@@ -73,6 +79,18 @@ expect testId valuePrinter errorPrinter expectedValue result =
     
     Result.Err (TaskPort.CallError error) ->
       TestResult testId False <| "CallError: " ++ errorPrinter error
+
+expectInteropError : String -> TaskPort.InteropError -> Result (TaskPort.Error error) value -> TestResult
+expectInteropError testId expectedError result =
+  case result of
+    Result.Err (TaskPort.InteropError err) ->
+      if (err == expectedError) then
+        TestResult testId True ""
+      else
+        TestResult testId False ("Expected different error.\nExpected: " ++ TaskPort.interopErrorToString expectedError ++ "\nGot: " ++ TaskPort.interopErrorToString err)
+
+    Result.Err (TaskPort.CallError _) -> TestResult testId False "Expected interop error"
+    Result.Ok ok -> TestResult testId False "Expected error"
 
 subscriptions : Model -> Sub Msg
 subscriptions _ = start Start
