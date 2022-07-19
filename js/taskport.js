@@ -55,21 +55,21 @@ function install(xhrProto) {
       } else if (this.__elm_taskport_function === undefined) {
         this.status = 404;
         this.__elm_taskport_dispatch_event('error');
+      } else {
+        const parsedBody = JSON.parse(body);
+        const promise = callAndReturnPromise(this.__elm_taskport_function, parsedBody);
+        promise.then((res) => {
+          this.responseType = 'json';
+          this.response = (res === undefined)? 'null' : JSON.stringify(res); // force null if the function does not return a value
+          this.status = 200;
+          this.__elm_taskport_dispatch_event('load');
+        }).catch((err) => {
+          this.status = 500;
+          this.responseType = 'json';
+          this.response = JSON.stringify(err);
+          this.__elm_taskport_dispatch_event('error');
+        });  
       }
-
-      const parsedBody = JSON.parse(body);
-      const promise = callAndReturnPromise(this.__elm_taskport_function, parsedBody);
-      promise.then((res) => {
-        this.responseType = 'json';
-        this.response = (res === undefined)? 'null' : JSON.stringify(res); // force null if the function does not return a value
-        this.status = 200;
-        this.__elm_taskport_dispatch_event('load');
-      }).catch((err) => {
-        this.status = 500;
-        this.responseType = 'json';
-        this.response = JSON.stringify(err);
-        this.__elm_taskport_dispatch_event('error');
-      });
     } else {
       this.__elm_taskport_send(body);
     }
