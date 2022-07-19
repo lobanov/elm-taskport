@@ -68,8 +68,8 @@ expect testId valuePrinter errorPrinter expectedValue result =
       else
         TestResult testId False <| "Actual: " ++ (valuePrinter actualValue)
     
-    Result.Err (TaskPort.InteropError _) ->
-      TestResult testId False "InteropError"
+    Result.Err (TaskPort.InteropError err) ->
+      TestResult testId False (TaskPort.interopErrorToString err)
     
     Result.Err (TaskPort.CallError error) ->
       TestResult testId False <| "CallError: " ++ errorPrinter error

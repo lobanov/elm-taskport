@@ -1,4 +1,4 @@
-module TaskPort exposing (Error(..), InteropError(..), call, callNoArgs, tests)
+module TaskPort exposing (Error(..), InteropError(..), call, callNoArgs, tests, interopErrorToString)
 
 {-| This module allows to invoke JavaScript functions using the Elm's Task abstraction,
 which is convenient for chaining multiple API calls without introducing the complexity
@@ -51,6 +51,36 @@ type InteropError
   | CannotDecodeResponse JD.Error String
   | CannotDecodeError JD.Error String
   | RuntimeError String
+
+{-| In most cases instances of `InteropError` indicate a catastrophic failure in the
+application environment and thus cannot be recovered from. This function allows
+Elm application to fail gracefully by displaying an error message to the user,
+that would help application developer to debug the issue.
+
+It produces multiple lines of output, so you may want to peek at it with
+something like this:
+
+    import Html
+
+    errorToHtml : TaskPort.Error -> Html.Html msg
+    errorToHtml error =
+      Html.pre [] [ Html.text (TaskPort.interopErrorToString error) ]
+-}
+interopErrorToString : InteropError -> String
+interopErrorToString error =
+  case error of
+    FunctionNotFound -> "FunctionNotFound: attempted to call unknown function."
+    NotInstalled -> "NotInstalled: TaskPort JS component is not installed."
+    VersionMismatch -> "VersionMismatch: TaskPort JS component version is different from the Elm package version."
+    CannotDecodeResponse err body
+      -> "CannotDecodeResponse: unable to decode function response.\n"
+      ++ "Response:\n" ++ body ++ "\n\n"
+      ++ "Error:\n" ++ (JD.errorToString err)
+    CannotDecodeError err body
+      -> "CannotDecodeError: unable to decode function error.\n"
+      ++ "Response:\n" ++ body ++ "\n\n"
+      ++ "Error:\n" ++ (JD.errorToString err)
+    RuntimeError message -> "RuntimeError: " ++ message
 
 {-| Creates a Task encapsulating an invocation of a particular asyncronous JavaScript function.
 This function will usually be wrapped into a more specific one, which will partially apply it
