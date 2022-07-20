@@ -1,4 +1,4 @@
-const MODULE_VERSION = "1.0.3";
+const MODULE_VERSION = "1.1.0";
 
 const functions = {};
 
