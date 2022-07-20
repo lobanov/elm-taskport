@@ -36,6 +36,12 @@ The following files need to be updated with the new Elm package version in `elm.
 * `src/TaskPort.elm` (see `moduleVersion`)
 * `js/taskport.js` (see `MODULE_VERSION`)
 
+Verify that version changes are successful by running Node tests again:
+
+```sh
+yarn node-test
+```
+
 ## Release Elm package
 
 * Check-in everything to the repo
