@@ -19,7 +19,7 @@ function callAndReturnPromise(fn, args) {
  * - name: string containing the type of the error object, e.g. 'ReferenceError'
  * - message: string which could be empty
  * - stackLines: platform-specific stack trace for the error broken down into separate lines as an array of strings
- * - cause: optional recursively nested object if the cause is an Error, or a JSON string
+ * - cause: optional nested object provided as a cause for the Error, whcih is processed recursively if it itself is an Error
  * 
  * If invoked with something which isn't an error, returns passes the argument through unchanged.
  */
