@@ -5,7 +5,7 @@ TaskPort is an Elm module allowing to call JavaScript APIs from Elm using the Ta
 
 This module works in Chrome, Firefox, Safari, and Node.js.
 
-If you are upgarding from a previous version, see [CHANGES](./CHANGES.md).
+If you are upgarding from a previous version, see [CHANGES](https://github.com/lobanov/elm-taskport/blob/main/CHANGES.md).
 
 For impatient, jump straight to [Installation](#installation) or [Usage](#usage).
 
