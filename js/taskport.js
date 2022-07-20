@@ -11,6 +11,29 @@ function callAndReturnPromise(fn, args) {
   }
 }
 
+/**
+ * Returns an object containing all meaningful information
+ * from a given Error instance available across different platforms.
+ * 
+ * Specifically it would have:
+ * - name: string containing the type of the error object, e.g. 'ReferenceError'
+ * - message: string which could be empty
+ * - stackLines: platform-specific stack trace for the error broken down into separate lines as an array of strings
+ * - cause: optional recursively nested object if the cause is an Error, or a JSON string
+ * 
+ * If invoked with something which isn't an error, returns passes the argument through unchanged.
+ */
+function describeError(error) {
+  if (error instanceof Error) {
+    // handling subtypes of Error explicity, as JSON.stingify() does not extract any information
+    const {name, message, cause, stack} = error;
+    const stackLines = (stack === undefined)? [] : stack.split(/\n/);
+    return { name, message, cause: describeError(cause), stackLines };
+  } else {
+    return error;
+  }
+}
+
 /** Configure JavaScript environment on the current page to enable interop calls. */
 function install(xhrProto) {
   if (xhrProto === undefined) {
@@ -66,7 +89,7 @@ function install(xhrProto) {
         }).catch((err) => {
           this.status = 500;
           this.responseType = 'json';
-          this.response = JSON.stringify(err);
+          this.response = JSON.stringify(describeError(err));
           this.__elm_taskport_dispatch_event('load');
         });  
       }

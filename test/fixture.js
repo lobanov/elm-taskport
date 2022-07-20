@@ -10,7 +10,7 @@ function register(taskport) {
   
   taskport.register("noArgs3", function() {
     return { key1: 'value1', key2: 'value2' }
-  });  
+  });
 
   taskport.register("noArgsAsyncResolve", function() {
     return new Promise((resolve) => {
@@ -23,6 +23,10 @@ function register(taskport) {
       setTimeout(() => reject("expected"), 100);
     });
   });
+
+  taskport.register("noArgsThrowsError", function() {
+    throw new Error("message");
+  });  
 }
 
 (function (root, factory) {

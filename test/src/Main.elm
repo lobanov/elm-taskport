@@ -27,6 +27,7 @@ type Msg
   | Case4 String (Result (TaskPort.Error String) String)
   | Case5 String (Result (TaskPort.Error String) String)
   | Case6 String (Result (TaskPort.Error String) String)
+  | Case7 String (Result (TaskPort.Error String) String)
 
 type alias Model = { }
 
@@ -63,6 +64,11 @@ update msg model =
         ] |> Cmd.batch
 
       Case6 testId res ->
+        [ expectCallError testId identity "expected" res |> reportTestResult
+        , TaskPort.callNoArgs "noArgsThrowsError" JD.string JD.string |> Task.attempt (Case7 "test7")
+        ] |> Cmd.batch
+
+      Case7 testId res ->
         [ expectCallError testId identity "expected" res |> reportTestResult
         , completed "OK"
         ] |> Cmd.batch
