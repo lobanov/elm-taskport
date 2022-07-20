@@ -9,7 +9,10 @@ Before TypePort can be used in Elm, it must be set up on JavaScript side.
 Refer to the [README](https://github.com/lobanov/elm-taskport/blob/main/README.md) for comprehensive instructions.
 
 # Usage
-@docs call, callNoArgs, Error, InteropError
+@docs call, callNoArgs
+
+# Error handling
+@docs Error, InteropError, interopErrorToString
 
 # Tests
 We are exposing tests suite to help test module's implementation details.
@@ -42,7 +45,7 @@ type Error x
 
 {-| Subcategory of errors indicating a failure of the interop mechanism itself.
 These errors are generally not receoverable, but you can use them to allow the application to fail gracefully,
-or at least provide useful context for debugging.
+or at least provide useful context for debugging, for which you can use helper function `interopErrorToString`.
 -}
 type InteropError
   = FunctionNotFound
