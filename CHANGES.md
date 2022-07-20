@@ -5,7 +5,7 @@ Changes
 ## Version 1.1.0
 
 Released: 2022-07-20
-* Fixes a bug epresenting all JS errors as `InteropError NotInstalled` (issue #3).
+* Fixes a bug representing all JS errors as `InteropError NotInstalled` (issue #3).
 * Implemented a function converting `InteropError`s into a descriptive string to simplify creation of helpful error messages (issue #4).
 
 ## Version 1.0.3
