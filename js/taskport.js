@@ -19,7 +19,7 @@ function callAndReturnPromise(fn, args) {
  * - name: string containing the type of the error object, e.g. 'ReferenceError'
  * - message: string which could be empty
  * - stackLines: platform-specific stack trace for the error broken down into separate lines as an array of strings
- * - cause: optional nested object provided as a cause for the Error, whcih is processed recursively if it itself is an Error
+ * - cause: nested object provided as a cause for the `Error`, whcih is processed recursively if it itself is an `Error`, or `null`
  * 
  * If invoked with something which isn't an error, returns passes the argument through unchanged.
  */
@@ -29,6 +29,8 @@ function describeError(error) {
     const {name, message, cause, stack} = error;
     const stackLines = (stack === undefined)? [] : stack.split(/\n/);
     return { name, message, cause: describeError(cause), stackLines };
+  } else if (error === undefined) {
+    return 'null';
   } else {
     return error;
   }

@@ -25,7 +25,7 @@ function register(taskport) {
   });
 
   taskport.register("noArgsThrowsError", function() {
-    throw new Error("message");
+    throw new Error("expected");
   });  
 }
 

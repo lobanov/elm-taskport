@@ -1,4 +1,9 @@
-module TaskPort exposing (Error(..), InteropError(..), call, callNoArgs, tests, interopErrorToString)
+module TaskPort exposing 
+  ( Error(..), InteropError(..), JSError(..), JSErrorRecord
+  , interopErrorToString, jsErrorToString, errorToString, jsErrorDecoder
+  , call, callNoArgs
+  , tests
+  )
 
 {-| This module allows to invoke JavaScript functions using the Elm's Task abstraction,
 which is convenient for chaining multiple API calls without introducing the complexity
@@ -84,6 +89,55 @@ interopErrorToString error =
       ++ "Response:\n" ++ body ++ "\n\n"
       ++ "Error:\n" ++ (JD.errorToString err)
     RuntimeError message -> "RuntimeError: " ++ message
+
+
+{-| Generic type representing all possibilities that could be returned from an interop call.
+JavaScript is very lenient regarding its errors. Any value could be thrown, and, if the JS code
+is asynchronous, the `Promise` can reject with any value. TaskPort makes an honest attempt
+to decode the error presenting one of the variants of this type.
+
+    case error of
+        CallError (ErrorObject "VerySpecificError" _) -> -- handle a particular subtype of Error thrown by the JS code
+        _ -> -- respond to the error in a generic way, e.g show an error message creted via TaskPort.errorToString
+-}
+type JSError = ErrorObject String JSErrorRecord | ErrorValue JE.Value
+type alias JSErrorRecord = { name : String, message : String, stackLines : List String, cause : Maybe JSError }
+
+jsErrorDecoder : JD.Decoder JSError
+jsErrorDecoder = 
+  JD.oneOf
+    [ JD.map2 ErrorObject
+      (JD.field "name" JD.string)
+      jsErrorRecordDecoder
+    , JD.map ErrorValue JD.value
+    ]
+
+jsErrorRecordDecoder : JD.Decoder JSErrorRecord
+jsErrorRecordDecoder =
+  JD.map4 JSErrorRecord
+    (JD.field "name" JD.string)
+    (JD.field "message" JD.string)
+    (JD.field "stackLines" (JD.list JD.string))
+    (JD.field "cause" (JD.oneOf
+      [ JD.null Nothing
+      , JD.map Just <| JD.lazy (\_ -> jsErrorDecoder)
+      ]
+    ))
+
+jsErrorToString : JSError -> String
+jsErrorToString error =
+  case error of
+    ErrorValue v -> "JSON object:\n" ++ (JE.encode 4 v)
+    ErrorObject name o -> name ++ ": " ++ o.message ++ "\n" ++ (String.join "\n" o.stackLines)
+
+{-| Convenience method for creating a user-presentable string describing an error
+which occured during an interop call in case when the JS code 
+-}
+errorToString : Error JSError -> String
+errorToString error =
+  case error of
+    InteropError e -> interopErrorToString e
+    CallError e -> jsErrorToString e
 
 {-| Creates a Task encapsulating an invocation of a particular asyncronous JavaScript function.
 This function will usually be wrapped into a more specific one, which will partially apply it

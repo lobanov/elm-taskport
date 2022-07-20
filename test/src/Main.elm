@@ -27,7 +27,7 @@ type Msg
   | Case4 String (Result (TaskPort.Error String) String)
   | Case5 String (Result (TaskPort.Error String) String)
   | Case6 String (Result (TaskPort.Error String) String)
-  | Case7 String (Result (TaskPort.Error String) String)
+  | Case7 String (Result (TaskPort.Error TaskPort.JSError) String)
 
 type alias Model = { }
 
@@ -65,14 +65,16 @@ update msg model =
 
       Case6 testId res ->
         [ expectCallError testId identity "expected" res |> reportTestResult
-        , TaskPort.callNoArgs "noArgsThrowsError" JD.string JD.string |> Task.attempt (Case7 "test7")
+        , TaskPort.callNoArgs "noArgsThrowsError" JD.string TaskPort.jsErrorDecoder |> Task.attempt (Case7 "test7")
         ] |> Cmd.batch
 
       Case7 testId res ->
-        [ expectCallError testId identity "expected" res |> reportTestResult
+        [ expectJSError testId (makeJSError "Error" "expected") res |> reportTestResult
         , completed "OK"
         ] |> Cmd.batch
   )
+
+makeJSError name message = TaskPort.ErrorObject name (TaskPort.JSErrorRecord name message [] Nothing)
 
 ppString : String -> String
 ppString str = "\"" ++ str ++ "\""
@@ -97,6 +99,32 @@ expect testId valuePrinter errorPrinter expectedValue result =
     
     Result.Err (TaskPort.CallError error) ->
       TestResult testId False <| "CallError: " ++ errorPrinter error
+
+expectJSError : String -> TaskPort.JSError -> Result (TaskPort.Error TaskPort.JSError) value -> TestResult
+expectJSError testId expectedError result =
+  case result of
+    Result.Ok actualValue -> TestResult testId False "Expected error"
+    
+    Result.Err (TaskPort.InteropError err) ->
+      TestResult testId False (TaskPort.interopErrorToString err)
+    
+    Result.Err (TaskPort.CallError err) ->
+      if (compareJSErrors expectedError err) then
+        TestResult testId True ""
+      else
+        TestResult testId False ("JSError: " ++ TaskPort.jsErrorToString err)
+
+compareJSErrors : TaskPort.JSError -> TaskPort.JSError -> Bool
+compareJSErrors expected actual =
+  case ( expected, actual ) of
+    ( TaskPort.ErrorValue e, TaskPort.ErrorValue a ) -> e == a
+    ( TaskPort.ErrorObject expectedName e, TaskPort.ErrorObject actualName a ) ->
+      if (expectedName == actualName && e.message == a.message) then
+        True
+      else
+        False
+
+    _ -> False
 
 expectCallError : String -> (error -> String) -> error -> Result (TaskPort.Error error) value -> TestResult
 expectCallError testId errorPrinter expectedError result =
