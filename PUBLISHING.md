@@ -1,11 +1,11 @@
-# How to build a new version
+# How to publish a new version
 
 ## Compile and test everything
 
 Build and test automatically in Node.
 
 ```sh
-yarn build
+yarn node-test
 ```
 
 Build test website and check manually in browsers.
@@ -13,6 +13,11 @@ Build test website and check manually in browsers.
 ```sh
 yarn web-test
 ```
+
+Should check at least:
+* Chrome
+* Firefox
+* Safari
 
 ## Determine new version number for Elm package
 
