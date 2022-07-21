@@ -154,4 +154,4 @@ You can use full machinery of the [Result module](https://package.elm-lang.org/p
 * A `TaskPort.InteropError` with information about the failure of the interop mechanism itself. This is of errors indicating a failure of the interop mechanism itself.
 * A `TaskPort.CallError` with a representation of the error returned from or thrown by the JS code. The value contained in this variant is decoded via `errorDecoder` argument passed to the `call` (or `callNoArgs`).
 
-Interop errors are generally not receoverable, but you can use them to allow the application to fail gracefully, or at least provide useful context for debugging. The latter is aided by the helper function `TaskPort.interopErrorToString`.
+Interop errors are generally not recoverable, but you can use them to allow the application to fail gracefully, or at least provide useful context for debugging. The latter is aided by the helper function `TaskPort.interopErrorToString`.
