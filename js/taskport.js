@@ -27,7 +27,7 @@ function describeError(error) {
   if (error instanceof Error) {
     // handling subtypes of Error explicity, as JSON.stingify() does not extract any information
     const {name, message, cause, stack} = error;
-    const stackLines = (stack === undefined)? [] : stack.split(/\n/);
+    const stackLines = (stack === undefined)? [] : stack.split(/\n/).slice(1);
     return { name, message, cause: describeError(cause), stackLines };
   } else if (error === undefined) {
     return 'null';
