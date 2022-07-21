@@ -36,7 +36,7 @@ For browser-based Elm applications that don't have much of HTML/JavaScript code,
 <script src="https://unpkg.com/elm-taskport@MODULE_VERSION/dist/taskport.min.js"></script>
 ```
 
-Substitute the actual version of the Elm package instead of `MODULE_VERSION`. The module will check that both sides are on the same version to prevent things blowing up. If dependency on [unpkg CDN](https://unpkg.com) makes your nervour, you can choose to distribute the JS file with the rest of your application. In this case, simply save it locally, add to your codebase, and modify the path in the `<script>` tag accordingly.
+Substitute the actual version of the Elm package instead of `MODULE_VERSION`. The module will check that both sides are on the same version to prevent things blowing up. If dependency on [unpkg CDN](https://unpkg.com) makes your nervous, you can choose to distribute the JS file with the rest of your application. In this case, simply save it locally, add to your codebase, and modify the path in the `<script>` tag accordingly.
 
 For browser-based applications which use a bundler like Webpack, TaskPort companion code can be downloaded as an NPM module.
 
