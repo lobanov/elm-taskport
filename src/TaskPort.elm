@@ -128,7 +128,10 @@ jsErrorToString : JSError -> String
 jsErrorToString error =
   case error of
     ErrorValue v -> "JSON object:\n" ++ (JE.encode 4 v)
-    ErrorObject name o -> name ++ ": " ++ o.message ++ "\n" ++ (String.join "\n" o.stackLines)
+    ErrorObject name o 
+      -> name ++ ": " ++ o.message ++ "\n"
+      ++ (String.join "\n" o.stackLines)
+      ++ Maybe.withDefault "" (Maybe.map (\cause -> "\nCaused by:\n" ++ jsErrorToString cause) o.cause)
 
 {-| Convenience method for creating a user-presentable string describing an error
 which occured during an interop call in case when the JS code 

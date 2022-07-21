@@ -25,8 +25,20 @@ function register(taskport) {
   });
 
   taskport.register("noArgsThrowsError", function() {
-    throw new Error("expected");
+    throwError("expected");
+  });
+
+  taskport.register("noArgsThrowsErrorWithNestedError", function() {
+    try {
+      throwError("nested")
+    } catch (e) {
+      throw new Error("expected", { cause: e });
+    }
   });  
+}
+
+function throwError(message) {
+  throw new Error(message);
 }
 
 (function (root, factory) {

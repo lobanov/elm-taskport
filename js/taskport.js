@@ -25,12 +25,13 @@ function callAndReturnPromise(fn, args) {
  */
 function describeError(error) {
   if (error instanceof Error) {
-    // handling subtypes of Error explicity, as JSON.stingify() does not extract any information
+    // unpacking subtypes of Error explicity, as JSON.stingify() does not extract any useful information
     const {name, message, cause, stack} = error;
     const stackLines = (stack === undefined)? [] : stack.split(/\n/).slice(1);
     return { name, message, cause: describeError(cause), stackLines };
   } else if (error === undefined) {
-    return 'null';
+    // this makes sure that cause field is always present when invoked recursively
+    return null;
   } else {
     return error;
   }

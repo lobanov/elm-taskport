@@ -28,6 +28,7 @@ type Msg
   | Case5 String (Result (TaskPort.Error String) String)
   | Case6 String (Result (TaskPort.Error String) String)
   | Case7 String (Result (TaskPort.Error TaskPort.JSError) String)
+  | Case8 String (Result (TaskPort.Error TaskPort.JSError) String)
 
 type alias Model = { }
 
@@ -70,11 +71,17 @@ update msg model =
 
       Case7 testId res ->
         [ expectJSError testId (makeJSError "Error" "expected") res |> reportTestResult
+        , TaskPort.callNoArgs "noArgsThrowsErrorWithNestedError" JD.string TaskPort.jsErrorDecoder |> Task.attempt (Case8 "test8")
+        ] |> Cmd.batch
+
+      Case8 testId res ->
+        [ expectJSError testId (makeJSErrorWithACause "Error" "expected" (makeJSError "Error" "nested")) res |> reportTestResult
         , completed "OK"
         ] |> Cmd.batch
   )
 
 makeJSError name message = TaskPort.ErrorObject name (TaskPort.JSErrorRecord name message [] Nothing)
+makeJSErrorWithACause name message cause = TaskPort.ErrorObject name (TaskPort.JSErrorRecord name message [] (Just cause))
 
 ppString : String -> String
 ppString str = "\"" ++ str ++ "\""
@@ -120,11 +127,14 @@ compareJSErrors expected actual =
     ( TaskPort.ErrorValue e, TaskPort.ErrorValue a ) -> e == a
     ( TaskPort.ErrorObject expectedName e, TaskPort.ErrorObject actualName a ) ->
       if (expectedName == actualName && e.message == a.message) then
-        True
+        case ( e.cause, a.cause ) of
+          ( Nothing, Nothing ) -> True
+          ( Just expectedCause, Just actualCause ) -> compareJSErrors expectedCause actualCause
+          _ -> False -- one has a cause, and one doesn't
       else
         False
 
-    _ -> False
+    _ -> False -- different payload types
 
 expectCallError : String -> (error -> String) -> error -> Result (TaskPort.Error error) value -> TestResult
 expectCallError testId errorPrinter expectedError result =
