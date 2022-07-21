@@ -103,7 +103,7 @@ expect testId valuePrinter errorPrinter expectedValue result =
 expectJSError : String -> TaskPort.JSError -> Result (TaskPort.Error TaskPort.JSError) value -> TestResult
 expectJSError testId expectedError result =
   case result of
-    Result.Ok actualValue -> TestResult testId False "Expected error"
+    Result.Ok actualValue -> TestResult testId False "Expected JS call error"
     
     Result.Err (TaskPort.InteropError err) ->
       TestResult testId False (TaskPort.interopErrorToString err)
@@ -112,7 +112,7 @@ expectJSError testId expectedError result =
       if (compareJSErrors expectedError err) then
         TestResult testId True ""
       else
-        TestResult testId False ("JSError: " ++ TaskPort.jsErrorToString err)
+        TestResult testId False ("Expected JS error:\n" ++ (TaskPort.jsErrorToString expectedError) ++ "Actual JS error:\n" ++ TaskPort.jsErrorToString err)
 
 compareJSErrors : TaskPort.JSError -> TaskPort.JSError -> Bool
 compareJSErrors expected actual =

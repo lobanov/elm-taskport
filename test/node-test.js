@@ -32,7 +32,7 @@ app.ports.completed.subscribe(function () {
       process.exit(1);
     } else if (counts.fail > 0) {
       console.error(`Executed ${counts.total} test cases, of which ${counts.fail} have failed`);
-      Object.entries(failedTestDetails).forEach(([testId, details]) => { console.error(testId, details); });
+      Object.entries(failedTestDetails).forEach(([testId, details]) => { console.error("Failed test: " + testId + "\n" + details); });
       process.exit(1);
     } else {
       console.error(`Executed ${counts.total} test cases`);
