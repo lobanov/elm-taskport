@@ -155,3 +155,5 @@ You can use full machinery of the [Result module](https://package.elm-lang.org/p
 * A `TaskPort.CallError` with a representation of the error returned from or thrown by the JS code. The value contained in this variant is decoded via `errorDecoder` argument passed to the `call` (or `callNoArgs`).
 
 Interop errors are generally not recoverable, but you can use them to allow the application to fail gracefully, or at least provide useful context for debugging. The latter is aided by the helper function `TaskPort.interopErrorToString`.
+
+TaskPort also provides `TaskPort.jsErrorDecoder` value, which is a JSON decoder for errors that may be returned from JS interop calls. It models various error types, so it's likely you would never need to implement your own decoder. If you specify it as a parameter for `TaskPort.call` or `TaskPort.callNoArgs`, you would get `TaskPort.JSError` value in case of a failure, which you can explore and interact with using a variety of helper methods. See the documentation for `TaskPort.JSError` for more information.

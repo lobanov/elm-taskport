@@ -17,7 +17,7 @@ Refer to the [README](https://github.com/lobanov/elm-taskport/blob/main/README.m
 @docs call, callNoArgs
 
 # Error handling
-@docs Error, InteropError, interopErrorToString
+@docs Error, JSError, JSErrorRecord, InteropError, jsErrorDecoder, interopErrorToString, jsErrorToString, errorToString
 
 # Tests
 We are exposing tests suite to help test module's implementation details.
@@ -93,16 +93,62 @@ interopErrorToString error =
 
 {-| Generic type representing all possibilities that could be returned from an interop call.
 JavaScript is very lenient regarding its errors. Any value could be thrown, and, if the JS code
-is asynchronous, the `Promise` can reject with any value. TaskPort makes an honest attempt
-to decode the error presenting one of the variants of this type.
+is asynchronous, the `Promise` can reject with any value. TaskPort always attempts to decode erroneous
+results returned from iterop calls using `ErrorObject` variant and `JSErrorRecord` structure, which
+contains standard fields for JavaScript `Error` object, but if itsn't possible, it will resorts to
+`ErrorValue` variant followed by the JSON value as-is. 
+
+In most cases you would pass values of this type to `jsErrorToString` to create
+a useful diagnostic information, but you might also have a need to handle certain types
+of errors in a particular way. To make that easier, `ErrorObject` variant lifts up the error
+name to aid pattern-match for error types. You may do something like this:
 
     case error of
         CallError (ErrorObject "VerySpecificError" _) -> -- handle a particular subtype of Error thrown by the JS code
-        _ -> -- respond to the error in a generic way, e.g show an error message creted via TaskPort.errorToString
+        _ -> -- respond to the error in a generic way, e.g show a diagnostic message
 -}
 type JSError = ErrorObject String JSErrorRecord | ErrorValue JE.Value
-type alias JSErrorRecord = { name : String, message : String, stackLines : List String, cause : Maybe JSError }
 
+{-| Structure describing an object conforming to JavaScript standard for `Error`.
+Unless you need to handle very specific failure condition in a particular way, you are unlikely
+to use this type.
+
+The structure contains the following fields:
+* `name` represents the type of the `Error` object, e.g. `ReferenceError`
+* `message` is a free-form string typically passed as a parameter to the error constructor
+* `stackLines` is a platform-specific stack trace for the error
+* `cause` optional nested error object, which is first attempted to be decoded as a `JSErrorRecord`, but
+falls back to `JSError.ErrorValue` if that's impossible.
+-}
+type alias JSErrorRecord =
+  { name : String
+  , message : String
+  , stackLines : List String
+  , cause : Maybe JSError
+  }
+
+{-| Generates a human-readable and hopefully helpful string with diagnostic information
+describing a `JSError`. It produces multiple lines of output, so you may want to peek at it with
+something like this:
+
+    import Html
+
+    errorToHtml : TaskPort.JSError -> Html.Html msg
+    errorToHtml error =
+      Html.pre [] [ Html.text (TaskPort.jsErrorToString error) ]
+-}
+jsErrorToString : JSError -> String
+jsErrorToString error =
+  case error of
+    ErrorValue v -> "JSON object:\n" ++ (JE.encode 4 v)
+    ErrorObject name o 
+      -> name ++ ": " ++ o.message ++ "\n"
+      ++ (String.join "\n" o.stackLines)
+      ++ Maybe.withDefault "" (Maybe.map (\cause -> "\nCaused by:\n" ++ jsErrorToString cause) o.cause)
+
+{-| JSON decoder that constructs a `JSError` value from erroneous results returned by an interop call.
+You would pass it to `TaskPort.call` or `TaskPort.callNoArgs`.
+-}
 jsErrorDecoder : JD.Decoder JSError
 jsErrorDecoder = 
   JD.oneOf
@@ -124,17 +170,8 @@ jsErrorRecordDecoder =
       ]
     ))
 
-jsErrorToString : JSError -> String
-jsErrorToString error =
-  case error of
-    ErrorValue v -> "JSON object:\n" ++ (JE.encode 4 v)
-    ErrorObject name o 
-      -> name ++ ": " ++ o.message ++ "\n"
-      ++ (String.join "\n" o.stackLines)
-      ++ Maybe.withDefault "" (Maybe.map (\cause -> "\nCaused by:\n" ++ jsErrorToString cause) o.cause)
-
 {-| Convenience method for creating a user-presentable string describing an error
-which occured during an interop call in case when the JS code 
+which occured during an interop call in case use `jsErrorDecoder` in your interop calls.
 -}
 errorToString : Error JSError -> String
 errorToString error =
@@ -155,7 +192,7 @@ or an `Err`, containing a `TaskPort.Error` describing what went wrong.
 
     type Msg = GotWidgetName (Result String String)
 
-    TaskPort.call "getWidgetNameByIndex" Json.Decode.string Json.Decode.string Json.Encode.int 0
+    TaskPort.call "getWidgetNameByIndex" Json.Decode.string TaskPort.jsErrorDecoder Json.Encode.int 0
         |> Task.attempt GotWidgetName
 
 The `Task` abstraction allows to effectively compose chains of tasks without creating many intermediate variants in the Msg type, and
@@ -165,12 +202,12 @@ of widgets, and then call `getWidgetName` with each widget's index to obtain its
 
     type Msg = GotWidgets (Result String (List String))
     
-    TaskPort.callNoArgs "getWidgetsCount" Json.Decode.int Json.Decode.string
+    TaskPort.callNoArgs "getWidgetsCount" Json.Decode.int TaskPort.jsErrorDecoder
         |> Task.andThen
             (\count ->
                 List.range 0 (count - 1)
                     |> List.map Json.Encode.int
-                    |> List.map (TaskPort.call "getWidgetNameByIndex" Json.Decode.string Json.Decode.string)
+                    |> List.map (TaskPort.call "getWidgetNameByIndex" TaskPort.jsErrorDecoder Json.Decode.string)
                     |> Task.sequence
             )
         |> Task.attempt GotWidgets
