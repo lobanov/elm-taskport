@@ -67,11 +67,11 @@ function install(xhrProto) {
 
   xhrProto.__elm_taskport_send = xhrProto.send;
   xhrProto.send = function (body) {
-    Object.defineProperty(this, "responseType", { writable: true });
-    Object.defineProperty(this, "response", { writable: true });
-    Object.defineProperty(this, "status", { writable: true });
-
     if (this.__elm_taskport_function_call) {
+      Object.defineProperty(this, "responseType", { writable: true });
+      Object.defineProperty(this, "response", { writable: true });
+      Object.defineProperty(this, "status", { writable: true });
+
       if (this.__elm_taskport_version !== MODULE_VERSION) {
         console.error("TaskPort version conflict. Elm-side is " + this.__elm_taskport_version
           + ", but JavaScript-side is " + MODULE_VERSION + ". Don't forget that both sides must use the same version");
