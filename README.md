@@ -106,7 +106,7 @@ Usage
 
 TaskPort wraps each call of JavaScript functions into a [Task](https://package.elm-lang.org/packages/elm/core/latest/Task#Task), which is Elm's abstraction for an effectful operation, and which allows them to be chained together to achieve complex side effects, such as making multiple API calls, or interacting with the runtime environment.
 
-`Task` itself only represent a potential operation. In order for it to be executed, it needs to be converted to a command (instance of [Cmd](https://package.elm-lang.org/packages/elm/core/latest/Platform-Cmd#Cmd)) and given to the Elm runtime. In most cases you would pass the task representing the JS interop call into [Task.attempt](https://package.elm-lang.org/packages/elm/core/latest/Task#attempt) function to turn it into a [Cmd]. You would normally do this in your application's `update` or `init` function. See [the Elm Architecture](https://guide.elm-lang.org/architecture/) to learn more about these functions and the application lifecycle.
+`Task` itself only represent a potential operation. In order for it to be executed, it needs to be converted to a command (instance of [Cmd](https://package.elm-lang.org/packages/elm/core/latest/Platform-Cmd#Cmd)) and given to the Elm runtime. In most cases you would pass the task representing the JS interop call into [Task.attempt](https://package.elm-lang.org/packages/elm/core/latest/Task#attempt) function to turn it into a `Cmd`. You would normally do this in your application's `update` or `init` function. See [the Elm Architecture](https://guide.elm-lang.org/architecture/) to learn more about these functions and the application lifecycle.
 
 ### Basic usage
 
