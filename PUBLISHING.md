@@ -68,3 +68,7 @@ elm publish
 ```sh
 yarn publish
 ```
+
+## Post-publishing
+
+Add release notes to [CHANGES](./CHANGES.md).
