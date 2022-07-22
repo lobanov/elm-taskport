@@ -1,9 +1,9 @@
 elm-taskport
 ============
 
-TaskPort is an Elm module allowing to call JavaScript APIs from Elm using the Task abstraction. The same repository contains the source for the Elm package, as well as the source for the JavaScript NPM companion package.
+TaskPort is an Elm package allowing to call JavaScript APIs from Elm using the Task abstraction. The same repository contains the source for the Elm package, as well as the source for the JavaScript NPM companion package.
 
-This module works in Chrome, Firefox, Safari, and Node.js.
+This package works in Chrome, Firefox, Safari, and Node.js.
 
 If you are upgarding from a previous version, see [CHANGES](https://github.com/lobanov/elm-taskport/blob/main/CHANGES.md).
 
@@ -20,7 +20,7 @@ Fortunately, Elm provides a very useful [Task module](https://package.elm-lang.o
 
 Of course, not every API is available over HTTP. One could imagine a mechanism to extend Elm langauge to allow any effectful action to be wrapped into a `Task` to be executed in a controlled way. Unfortunately, Elm's existing JavaScript interoperability mechanisms are limited to one-way ports system, and do not allow creation of tasks.
 
-This module aims to solve this problem by allowing any JavaScript function to be wrapped into a `Task` and use full expresiveness of the `Task` module to chain their execution with other tasks in a way that remains TEA-compliant and type-safe.
+This package aims to solve this problem by allowing any JavaScript function to be wrapped into a `Task` and use full expresiveness of the `Task` module to chain their execution with other tasks in a way that remains TEA-compliant and type-safe.
 
 Installation
 ------------
@@ -33,12 +33,12 @@ There are two ways to go about doing this depending on what is more appropriate 
 For browser-based Elm applications that don't have much of HTML/JavaScript code, TaskPort can be included using a `<script>` tag.
 
 ```html
-<script src="https://unpkg.com/elm-taskport@MODULE_VERSION/dist/taskport.min.js"></script>
+<script src="https://unpkg.com/elm-taskport@ELM_PACKAGE_VERSION/dist/taskport.min.js"></script>
 ```
 
-Substitute the actual version of the Elm package instead of `MODULE_VERSION`. The module will check that both sides are on the same version to prevent things blowing up. If dependency on [unpkg CDN](https://unpkg.com) makes your nervous, you can choose to distribute the JS file with the rest of your application. In this case, simply save it locally, add to your codebase, and modify the path in the `<script>` tag accordingly.
+Substitute the actual version of the TaskPort package instead of `ELM_PACKAGE_VERSION`. The code is checking that Elm and JS are on the same version to prevent things blowing up. If dependency on [unpkg CDN](https://unpkg.com) makes your nervous, you can choose to distribute the JS file with the rest of your application. In this case, simply save it locally, add to your codebase, and modify the path in the `<script>` tag accordingly.
 
-For browser-based applications which use a bundler like Webpack, TaskPort companion code can be downloaded as an NPM module.
+For browser-based applications which use a bundler like Webpack, TaskPort JavaScript code can be downloaded as an NPM package.
 
 ```sh
 npm add --save elm-taskport # or yarn add elm-taskport --save
@@ -46,10 +46,10 @@ npm add --save elm-taskport # or yarn add elm-taskport --save
 
 This will bring all necessary JavaScript files files into `node_modules/elm-taskport` directory.
 
-If you are developing an Elm application in an environment that does not have `XMLHttpRequest` in the global namespace (e.g. Node.js), you would need to provide that as well, because that's required for TaskPort to work. TaskPort is tested with [xmlhttprequest](https://www.npmjs.com/package/xmlhttprequest) NPM module, which is recommended.
+If you are developing an Elm application in an environment that does not have `XMLHttpRequest` in the global namespace (e.g. Node.js), you would need to provide that as well, because that's required for TaskPort to work. TaskPort is tested with [xmlhttprequest](https://www.npmjs.com/package/xmlhttprequest) NPM package version 1.8.0, which is recommended.
 
 ```sh
-npm add --save xmlhttprequest # or yarn add xmlhttprequest --save
+npm add --save xmlhttprequest@1.8.0 # or yarn add xmlhttprequest@1.8.0 --save
 ```
 
 Once that is done, you can include TaskPort in your main JavaScript or TypeScript file.
@@ -95,7 +95,7 @@ TaskPort.register("functionName", (args) => {
 });
 ```
 
-The type of `args` is determined entirely by the client Elm code, or, to be more precise, by the `argsEncoder` parameter passed to `TaskPort.call` function. Refer to [the Elm module documentation](https://package.elm-lang.org/packages/lobanov/elm-taskport/latest/) for details. This means that it is safe to deconstruct `args` as an object or a list if that is how the arguments are encoded.
+The type of `args` is determined entirely by the client Elm code, or, to be more precise, by the `argsEncoder` parameter passed to `TaskPort.call` function. Refer to [the Elm package documentation](https://package.elm-lang.org/packages/lobanov/elm-taskport/latest/) for details. This means that it is safe to deconstruct `args` as an object or a list if that is how the arguments are encoded.
 
 The function body can do anything a regular JavaScript function can do. The TaskPort interop logic will call `Promise.resolve()` on the returned value, so the function can return either a `Promise` or a simple value. For this reason, the function can be `async` and use `await` keyword.
 
