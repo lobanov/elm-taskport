@@ -7,7 +7,7 @@ This package works in Chrome, Firefox, Safari, and Node.js.
 
 If you are upgarding from a previous version, see [CHANGES](https://github.com/lobanov/elm-taskport/blob/main/CHANGES.md).
 
-For impatient, jump straight to [Installation](#installation) or [Usage](#usage).
+For the impatient, jump straight to [Installation](#installation) or [Usage](#usage).
 
 Motivation
 ----------
