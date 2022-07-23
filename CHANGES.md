@@ -1,9 +1,14 @@
 Changes
 =======
 
+## Version 1.2.1
+
+Released: 2022-07-23
+* Fixes an error in using TaskPort with Tauri ([PR #10](https://github.com/lobanov/elm-taskport/pull/10) -- thanks @miniBill)
+
 ## Version 1.2.0
 
-Release: 2022-07-22
+Released: 2022-07-22
 * Provides `jsErrorDecoder` value and `JSError` type to represent any erroneous result of executing a JavaScript function (issue #3)
 * Minor package documentation improvements
 
