@@ -71,77 +71,72 @@ function install(xhrProto) {
   }
   xhrProto.__elm_taskport_open = xhrProto.open;
   xhrProto.open = function (method, url, async, user, password) {
-    if (!url.match(/^elmtaskport:/)) {
-      // only if the url begins with elmtaskport protocol, the request will be intercepted
-      return this.__elm_taskport_open(method, url, async, user, password);
-    }
+    if (url.match(/^elmtaskport:/)) {
+      this.__elm_taskport_url = url;
+      this.__elm_taskport_function_call = true;
 
-    this.__elm_taskport_url = url;
-    this.__elm_taskport_function_call = true;
+      // making certain properties writable so that they can be manipulated
+      Object.defineProperty(this, "responseType", { writable: true });
+      Object.defineProperty(this, "response", { writable: true });
+      Object.defineProperty(this, "status", { writable: true });
 
-    // making certain properties writable so that they can be manipulated
-    Object.defineProperty(this, "readyState", { writable: true });
-    Object.defineProperty(this, "responseType", { writable: true });
-    Object.defineProperty(this, "response", { writable: true });
-    Object.defineProperty(this, "status", { writable: true });
-
-    // attempting to parse the url
-    // for the default namespace: elmtaskport:///functionName?v=MAJOR.MINOR.PATCH
-    // for a specific namespace: elmtaskport://author-name/package-name/functionName?v=MAJOR.MINOR.PATCH&nsv=NAMESPACE_VERSION
-    const m = url.match(/^elmtaskport:\/\/([\w-]+\/[\w-]+)?\/([\w]+)\?v=(\d\.\d\.\d)(?:&nsv=([\w.-]+))?$/);
-    if (m === null) {
-      this.__elm_taskport_error = [ 400, `Cannot decode TaskPort url ${url}. `
-        + `Did you update TaskPort package to a new version, but forgot to update the JavaScript code it requires?` ];
-
-    } else {
-      const [_, namespaceName, functionName, apiVersion, namespaceVersion] = m;
-      if (apiVersion !== MODULE_VERSION) {
-        this.__elm_taskport_error = [ 400, `TaskPort version conflict. Elm-side is ${apiVersion}, but JavaScript-side is ${MODULE_VERSION}. `
+      // attempting to parse the url
+      // for the default namespace: elmtaskport:///functionName?v=MAJOR.MINOR.PATCH
+      // for a specific namespace: elmtaskport://author-name/package-name/functionName?v=MAJOR.MINOR.PATCH&nsv=NAMESPACE_VERSION
+      const m = url.match(/^elmtaskport:\/\/([\w-]+\/[\w-]+)?\/([\w]+)\?v=(\d\.\d\.\d)(?:&nsv=([\w.-]+))?$/);
+      if (m === null) {
+        this.__elm_taskport_error = [ 400, `Cannot decode TaskPort url ${url}. `
           + `Did you update TaskPort package to a new version, but forgot to update the JavaScript code it requires?` ];
 
-      } else if (namespaceName === undefined) {
-        // looking for the function is in the default namespace
-        const fn = defaultNamespace.find(functionName);
-        if (fn !== undefined) {
-          this.__elm_taskport_function = fn;
-        } else {
-          this.__elm_taskport_error = [ 404, `Cannot find function '${functionName} in the default namespace. `
-            + `The default namespace has the following functons registered:\n`
-            + defaultNamespace.names().join("\n") ]
-        }
-
       } else {
-        // looking for the function in a specified namespace
-        if (namespaceName in namespaces) {
-          const ns = namespaces[namespaceName];
-          if (ns.version === namespaceVersion) {
-            const fn = ns.find(functionName);
-            if (fn !== undefined) {
-              this.__elm_taskport_function = fn;
-            } else {
-              this.__elm_taskport_error = [ 404, `Cannot find function '${functionName} in namespace ${namespaceName}. `
-                + `This namespace has only the following functons registered with it:\n`
-                + ns.names().join("\n") ];
-            }
+        const [_, namespaceName, functionName, apiVersion, namespaceVersion] = m;
+        if (apiVersion !== MODULE_VERSION) {
+          this.__elm_taskport_error = [ 400, `TaskPort version conflict. Elm-side is ${apiVersion}, but JavaScript-side is ${MODULE_VERSION}. `
+            + `Did you update TaskPort package to a new version, but forgot to update the JavaScript code it requires?` ];
 
+        } else if (namespaceName === undefined) {
+          // looking for the function is in the default namespace
+          const fn = defaultNamespace.find(functionName);
+          if (fn !== undefined) {
+            this.__elm_taskport_function = fn;
           } else {
-            this.__elm_taskport_error = [ 400, `The interop call expected namespace ${namespaceName} to have version ${namespaceVersion}, `
-              + `but it is registered with version ${ns.version}. `
-              + `Did you update the Elm package to a new version, but forgot to update the JavaScript code it requires?` ];
+            this.__elm_taskport_error = [ 404, `Cannot find function '${functionName} in the default namespace. `
+              + `The default namespace has the following functons registered:\n`
+              + defaultNamespace.names().join("\n") ]
           }
 
         } else {
-          const knownNamespaces = Object.keys(namespaces);
-          this.__elm_taskport_error = [ 404, `Namespace ${namespaceName} is not registered with TaskPort. `
-            + `Did you follow the instructions to install required JavaScript code for the package? `
-            + (knownNamespaces.length == 0)? `There are no namespaces registered with TaskPort.` :
-              `Only the following namespaces are known to TaskPort:\n` + knownNamespaces.join("\n") ]
+          // looking for the function in a specified namespace
+          if (namespaceName in namespaces) {
+            const ns = namespaces[namespaceName];
+            if (ns.version === namespaceVersion) {
+              const fn = ns.find(functionName);
+              if (fn !== undefined) {
+                this.__elm_taskport_function = fn;
+              } else {
+                this.__elm_taskport_error = [ 404, `Cannot find function '${functionName} in namespace ${namespaceName}. `
+                  + `This namespace has only the following functons registered with it:\n`
+                  + ns.names().join("\n") ];
+              }
+
+            } else {
+              this.__elm_taskport_error = [ 400, `The interop call expected namespace ${namespaceName} to have version ${namespaceVersion}, `
+                + `but it is registered with version ${ns.version}. `
+                + `Did you update the Elm package to a new version, but forgot to update the JavaScript code it requires?` ];
+            }
+
+          } else {
+            const knownNamespaces = Object.keys(namespaces);
+            this.__elm_taskport_error = [ 404, `Namespace ${namespaceName} is not registered with TaskPort. `
+              + `Did you follow the instructions to install required JavaScript code for the package? `
+              + (knownNamespaces.length == 0)? `There are no namespaces registered with TaskPort.` :
+                `Only the following namespaces are known to TaskPort:\n` + knownNamespaces.join("\n") ]
+          }
         }
       }
     }
-
-    // explicitly changing the state, as the original open() is not called
-    this.readyState = this.OPENED;
+    // still have to invoke the original open() otherwise XHR behaves unpredictably
+    return this.__elm_taskport_open(method, url, async, user, password);
   };
 
   if (typeof ProgressEvent === 'function') {
