@@ -11,23 +11,27 @@
   "bugs": {
     "url": "https://github.com/lobanov/elm-taskport/issues"
   },
-  "main": "js/taskport.js",
+  "module": "js/taskport.js",
+  "type": "module",
   "files": [
     "js/*.js",
     "dist/*.js"
   ],
   "devDependencies": {
     "elm-test": "^0.19.1-revision9",
+    "webpack": "^5.74.0",
+    "webpack-cli": "^4.10.0",
     "xmlhttprequest": "^1.8.0"
   },
   "scripts": {
     "unit-test": "elm-test src/*.elm",
     "prebuild": "yarn unit-test",
-    "build": "uglifyjs -o dist/taskport.min.js js/taskport.js",
-    "build-test": "(cd test && elm make src/Main.elm --output build/elm.js)",
+    "build": "npx webpack",
+    "copy-dist-to-test": "cp -f dist/taskport.min.js test/build",
+    "build-test": "(cd test && elm make src/Main.elm --output build/elm.js) && yarn copy-dist-to-test",
     "prenode-test": "yarn build && yarn build-test",
     "node-test": "node test/node-test.js",
-    "preweb-test": "yarn build && cp dist/taskport.min.js test/build",
+    "preweb-test": "yarn build && yarn copy-dist-to-test",
     "web-test": "(cd test && elm reactor)",
     "prepublish": "yarn node-test"
   },
