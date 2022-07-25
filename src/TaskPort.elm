@@ -53,8 +53,8 @@ type alias Namespace = String
 
 {-| Alias for `String` type representing a version of a namespace for JavaScript interop functions.
 Namespaces are typically used by Elm package developers, and passed as a parameter to `QualifiedName`.
-TaskPort enforces semantic version formal MAJOR.MINOR.PATCH, but does not enforce any
-semantics. Most likely, Elm package developers will use Elm package version.
+TaskPort does not enforce any versioning scheme and allows any combination of alphanumeric characters, dots, and dashes.
+Most likely, Elm package developers will use Elm package version.
 -}
 type alias Version = String
 
