@@ -29,6 +29,9 @@ type Msg
   | Case6 String (Result (TaskPort.Error String) String)
   | Case7 String (Result (TaskPort.Error TaskPort.JSError) String)
   | Case8 String (Result (TaskPort.Error TaskPort.JSError) String)
+  | Case9 String (Result (TaskPort.Error TaskPort.JSError) String)
+  | Case10 String (Result (TaskPort.Error TaskPort.JSError) String)
+  | Case11 String (Result (TaskPort.Error TaskPort.JSError) String)
 
 type alias Model = { }
 
@@ -78,6 +81,38 @@ update msg model =
 
       Case8 testId res ->
         [ expectJSError testId (makeJSErrorWithACause "Error" "expected" (makeJSError "Error" "nested")) res |> reportTestResult
+        , TaskPort.callNS
+            { function = TaskPort.WithNS "test/test" "123" "echo"
+            , bodyDecoder = JD.string
+            , errorDecoder = TaskPort.jsErrorDecoder
+            , argsEncoder = JE.string
+            }
+            "hello"
+            |> Task.attempt (Case9 "test9")
+        ] |> Cmd.batch
+
+      Case9 testId res ->
+        [ expect testId identity TaskPort.jsErrorToString "hello" res |> reportTestResult
+        , TaskPort.callNoArgsNS
+            { function = TaskPort.WithNS "test/test" "123" "notRegistered"
+            , bodyDecoder = JD.string
+            , errorDecoder = TaskPort.jsErrorDecoder
+            }
+            |> Task.attempt (Case10 "test10")
+        ] |> Cmd.batch
+
+      Case10 testId res ->
+        [ expectInteropError testId (TaskPort.FunctionNotFound) res |> reportTestResult
+        , TaskPort.callNoArgsNS
+            { function = TaskPort.WithNS "test/test" "321" "notRegistered"
+            , bodyDecoder = JD.string
+            , errorDecoder = TaskPort.jsErrorDecoder
+            }
+            |> Task.attempt (Case11 "test11")
+        ] |> Cmd.batch
+
+      Case11 testId res ->
+        [ expectInteropError testId (TaskPort.VersionMismatch) res |> reportTestResult
         , completed "OK"
         ] |> Cmd.batch
   )

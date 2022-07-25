@@ -34,7 +34,12 @@ function register(taskport) {
     } catch (e) {
       throw new Error("expected", { cause: e });
     }
-  });  
+  });
+
+  const ns = taskport.createNamespace("test/test", "123");
+  ns.register("echo", function(str) {
+    return str;
+  });
 }
 
 function throwError(message) {
