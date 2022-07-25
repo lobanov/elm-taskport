@@ -1,6 +1,23 @@
 const MODULE_VERSION = "1.2.1";
 
-const functions = {};
+function Namespace(version) {
+  // TODO validate input
+  this.version = version;
+  this.functions = {};
+
+  this.register = function(name, fn) {
+    if (!name.match(/^\w+$/)) {
+      throw new Error("Invalid function name: " + name);
+    }
+    if (name in this.functions) {
+      throw new Error(name + " is already used");
+    }
+    this.functions[name] = fn;
+  }
+}
+
+const defaultNamespace = new Namespace(null);
+const namespaces = {};
 
 /** Returns a promise regardless of the return value of the fn */
 function callAndReturnPromise(fn, args) {
@@ -50,8 +67,8 @@ function install(xhrProto) {
       const moduleVersion = m[2];
       this.__elm_taskport_version = moduleVersion;
       this.__elm_taskport_function_call = true;
-      if (functionName in functions && typeof functions[functionName] === 'function') {
-        this.__elm_taskport_function = functions[functionName];
+      if (functionName in defaultNamespace.functions && typeof defaultNamespace.functions[functionName] === 'function') {
+        this.__elm_taskport_function = defaultNamespace.functions[functionName];
       } else {
         console.error("TaskPort function is not registered", functionName);
       }
@@ -102,17 +119,19 @@ function install(xhrProto) {
   };    
 }
 
-/** Register given JavaScript function under a particular name and make it available for the interop. */
+/**
+ * Register given JavaScript function under a particular name in the default namespace to make it available for the interop.
+ * 
+ */
 function register(name, fn) {
-  if (!name.match(/^\w+$/)) {
-    throw new Error("Invalid function name: " + name);
-  }
-  if (name in functions) {
-    throw new Error(name + " is already used");
-  }
-  functions[name] = fn;
+  defaultNamespace.register(name, fn);
 }
 
+function createNamespace(name, version) {
+  const ns = new Namespace(version);
+  namespaces[name] = ns;
+  return ns;
+}
 
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
