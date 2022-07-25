@@ -357,7 +357,7 @@ buildCallUrl function =
 resolveResponse : JD.Decoder a -> JD.Decoder x -> Http.Response String -> Result (Error x) a
 resolveResponse bodyDecoder errorDecoder res =
   case res of
-    Http.BadUrl_ url -> runtimeError <| "bad url" ++ url
+    Http.BadUrl_ url -> runtimeError <| "bad url " ++ url
     Http.Timeout_ -> runtimeError "timeout"
     Http.NetworkError_ -> Result.Err (InteropError NotInstalled)
     Http.BadStatus_ {statusCode} body -> 
