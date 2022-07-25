@@ -260,8 +260,9 @@ call functionName bodyDecoder errorDecoder argsEncoder args = callNS
   { function = DefaultNS functionName
   , bodyDecoder = bodyDecoder
   , errorDecoder = errorDecoder
+  , argsEncoder = argsEncoder
   }
-  (argsEncoder args)
+  args
 
 {-| Special version of the `call` that reduces amount of boilerplate code required when calling JavaScript functions
 that don't take any parameters. It is eqivalent of passing `Json.Encoder.null` into the `call`.
@@ -301,10 +302,11 @@ callNS :
   { function : QualifiedName
   , bodyDecoder : JD.Decoder body
   , errorDecoder : JD.Decoder error
+  , argsEncoder : (args -> JE.Value)
   }
-  -> JE.Value
+  -> args
   -> Task.Task (Error error) body
-callNS details args = Http.task <| buildHttpCall details.function details.bodyDecoder details.errorDecoder args
+callNS details args = Http.task <| buildHttpCall details.function details.bodyDecoder details.errorDecoder <| details.argsEncoder args
 
 {-| Creates a Task encapsulating an asyncronous invocation of a particular JavaScript function without parameters.
 It behaves similarly to `callNoArgs`, but this function is namespace-aware and is intended to be used
