@@ -21,7 +21,7 @@ main = Platform.worker
 
 type Msg
   = Start String
-  | Case1 String (Result (TaskPort.Error String) String)
+  | Case1 String (Result (TaskPort.Error String) (List String))
   | Case2 String (Result (TaskPort.Error String) (List String))
   | Case3 String (Result (TaskPort.Error String) (Dict String String))
   | Case4 String (Result (TaskPort.Error String) String)
@@ -39,11 +39,13 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model = 
   ( model
   , case {-- Debug.log "handling msg" --} msg of
-      Start _ -> TaskPort.callNoArgs "noArgs" JD.string JD.string |> Task.attempt (Case1 "test1")
+      Start _ -> TaskPort.call "echo" (JD.list JD.string) JD.string (JE.list JE.string) [ "echo1", "echo2" ] |> Task.attempt (Case1 "test1")
+
       Case1 testId res ->
-        [ expect testId identity identity "string value" res |> reportTestResult
+        [ expect testId (ppList ppString) identity [ "echo1", "echo2" ] res |> reportTestResult
         , TaskPort.callNoArgs "noArgs2" (JD.list JD.string) JD.string |> Task.attempt (Case2 "test2")
         ] |> Cmd.batch
+
       Case2 testId res ->
         [ expect testId (ppList ppString) identity [ "value1", "value2" ] res |> reportTestResult
         , TaskPort.callNoArgs "noArgs3" (JD.dict JD.string) JD.string |> Task.attempt (Case3 "test3")

@@ -1,7 +1,7 @@
 
 function register(taskport) {
-  taskport.register("noArgs", function() {
-    return "string value";
+  taskport.register("echo", function(args) {
+    return args;
   });
   
   taskport.register("noArgs2", function() {
