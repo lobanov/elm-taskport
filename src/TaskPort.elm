@@ -341,7 +341,7 @@ type alias HttpTaskArgs x a =
 buildHttpCall : QualifiedName -> (JD.Decoder body) -> (JD.Decoder error) -> JE.Value -> HttpTaskArgs error body
 buildHttpCall function bodyDecoder errorDecoder args =
   { method = "POST"
-  , headers = [ Http.header "Accept" "application/json" ]
+  , headers = []
   , url = buildCallUrl function
   , body = Http.jsonBody args
   , resolver = Http.stringResolver (resolveResponse bodyDecoder errorDecoder)
