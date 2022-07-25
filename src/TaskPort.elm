@@ -351,7 +351,7 @@ buildHttpCall function bodyDecoder errorDecoder args =
 buildCallUrl : QualifiedName -> String
 buildCallUrl function =
   case function of
-    DefaultNS name -> "elmtaskport://" ++ name ++ "?v=" ++ moduleVersion
+    DefaultNS name -> "elmtaskport:///" ++ name ++ "?v=" ++ moduleVersion
     WithNS ns nsVersion name -> "elmtaskport://" ++ ns ++ "/" ++ name ++ "?v=" ++ moduleVersion ++ "&nsv=" ++ nsVersion
 
 resolveResponse : JD.Decoder a -> JD.Decoder x -> Http.Response String -> Result (Error x) a
