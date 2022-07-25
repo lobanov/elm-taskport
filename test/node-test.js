@@ -1,4 +1,4 @@
-const TaskPort = require('../js/taskport.js');
+const TaskPort = require('./build/taskport.min.js');
 const TaskPortFixture = require('./fixture.js');
 const { XMLHttpRequest } = require('xmlhttprequest');
 const { Elm } = require('./build/elm.js');

@@ -1,30 +1,7 @@
+import { URL_PREFIX, parseUrl } from "./url.js";
+import { Namespace } from './namespace.js';
+
 const MODULE_VERSION = "1.2.1";
-
-function Namespace(version) {
-  // TODO validate input
-  this.version = version;
-  this.functions = {};
-
-  this.register = function(name, fn) {
-    if (!name.match(/^\w+$/)) {
-      throw new Error("Invalid function name: " + name);
-    }
-    if (name in this.functions) {
-      throw new Error(name + " is already used");
-    }
-    this.functions[name] = fn;
-  }
-
-  this.names = function() {
-    return Object.keys(this.functions);
-  }
-
-  this.find = function(name) {
-    if (name in this.functions) {
-      return this.functions[name];
-    }
-  }
-}
 
 const defaultNamespace = new Namespace(null);
 const namespaces = {};
@@ -65,13 +42,13 @@ function describeError(error) {
 }
 
 /** Configure JavaScript environment on the current page to enable interop calls. */
-function install(xhrProto) {
+export function install(xhrProto) {
   if (xhrProto === undefined) {
     xhrProto = XMLHttpRequest.prototype;
   }
   xhrProto.__elm_taskport_open = xhrProto.open;
   xhrProto.open = function (method, url, async, user, password) {
-    if (url.match(/^elmtaskport:/)) {
+    if (url.indexOf(URL_PREFIX) === 0) {
       this.__elm_taskport_url = url;
       this.__elm_taskport_function_call = true;
 
@@ -81,15 +58,13 @@ function install(xhrProto) {
       Object.defineProperty(this, "status", { writable: true });
 
       // attempting to parse the url
-      // for the default namespace: elmtaskport:///functionName?v=MAJOR.MINOR.PATCH
-      // for a specific namespace: elmtaskport://author-name/package-name/functionName?v=MAJOR.MINOR.PATCH&nsv=NAMESPACE_VERSION
-      const m = url.match(/^elmtaskport:\/\/([\w-]+\/[\w-]+)?\/([\w]+)\?v=(\d\.\d\.\d)(?:&nsv=([\w.-]+))?$/);
-      if (m === null) {
+      const parsedUrl = parseUrl(url);
+      if (parsedUrl === undefined) {
         this.__elm_taskport_error = [ 400, `Cannot decode TaskPort url ${url}. `
           + `Did you update TaskPort package to a new version, but forgot to update the JavaScript code it requires?` ];
 
       } else {
-        const [_, namespaceName, functionName, apiVersion, namespaceVersion] = m;
+        const { namespaceName, functionName, apiVersion, namespaceVersion } = parsedUrl;
         if (apiVersion !== MODULE_VERSION) {
           this.__elm_taskport_error = [ 400, `TaskPort version conflict. Elm-side is ${apiVersion}, but JavaScript-side is ${MODULE_VERSION}. `
             + `Did you update TaskPort package to a new version, but forgot to update the JavaScript code it requires?` ];
@@ -194,7 +169,7 @@ function install(xhrProto) {
  * @param {string} name
  * @param {(any) => any} fn
  */
-function register(name, fn) {
+export function register(name, fn) {
   defaultNamespace.register(name, fn);
 }
 
@@ -208,25 +183,8 @@ function register(name, fn) {
  * @param {string} version string encoding a semantic version of the JavaScript API
  * @returns {Namespace}
  */
-function createNamespace(name, version) {
+export function createNamespace(name, version) {
   const ns = new Namespace(version);
   namespaces[name] = ns;
   return ns;
 }
-
-(function (root, factory) {
-  if (typeof module === 'object' && module.exports) {
-      // Export for CommonJS-like environments like Node
-      module.exports = factory();
-  } else {
-      // Publish ourselves in browser globals (root is window)
-      root.TaskPort = factory();
-  }
-}(typeof self !== 'undefined' ? self : this, function () {
-
-  return {
-    install,
-    register,
-    createNamespace
-  };
-}));
