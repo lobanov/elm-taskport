@@ -181,7 +181,7 @@ function install(xhrProto) {
       }
       const [status, message] = this.__elm_taskport_error;
 
-      console.error("Unable to execute an interop call with the URL " + this.__elm_taskport_url, message);
+      console.error("Unable to execute an interop call with the URL " + this.__elm_taskport_url + ". " + message);
 
       this.status = status;
       this.responseType = 'text';
