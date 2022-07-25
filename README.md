@@ -25,6 +25,8 @@ This package aims to solve this problem by allowing any JavaScript function to b
 Installation
 ------------
 
+Note that these instructions apply to Elm application development. If you are authoring an Elm package that would be used in many applications, the approach is different. In such case, jump to section [Using TaskPort in Elm packages](#using-taskport-in-elm-packages)
+
 Before TaskPort can be used in Elm, it must be set up on the JavaScript side. There are a few steps that need to be done.
 
 ### 1. Include JavaScript companion code
@@ -157,3 +159,30 @@ You can use full machinery of the [Result module](https://package.elm-lang.org/p
 Interop errors are generally not recoverable, but you can use them to allow the application to fail gracefully, or at least provide useful context for debugging. The latter is aided by the helper function `TaskPort.interopErrorToString`.
 
 TaskPort also provides `TaskPort.jsErrorDecoder` value, which is a JSON decoder for errors that may be returned from JS interop calls. It models various error types, so it's likely you would never need to implement your own decoder. If you specify it as a parameter for `TaskPort.call` or `TaskPort.callNoArgs`, you would get `TaskPort.JSError` value in case of a failure, which you can explore and interact with using a variety of helper methods. See the documentation for `TaskPort.JSError` for more information.
+
+Using TaskPort in Elm packages
+------------------------------
+
+If you are looking to use TaskPort in an Elm package which could be used by many Elm applications, there are few important considerations you need to keep in mind.
+
+* Installation by application developer
+* Keeping Elm and JS code in sync
+* Distributing Elm and JS code
+
+Reference example [lobanov/elm-localstorage](https://github.com/lobanov/elm-localstorage).
+
+### Calling JS functions in a namespace
+
+```js
+const ns = TaskPort.createNamespace("lobanov/elm-localstorage", "v1"); // "v1" is a version of the JS API for the Elm package
+ns.register("localGet", function(key) => { /* function body */ });
+ns.register("localPut", function([key, value]) => { /* function body */ });
+```
+
+```elm
+import TaskPort exposing (Error, JSError, jsErrorDecoder)
+import Json.Encoder exposing (Value, value, string)
+
+localGet : String -> Task (Error JSError) Value
+localGet key = TaskPort.call ( "lobanov/elm-localstorage", "v1" ) "localGet" value jsErrorDecoder string key
+```
