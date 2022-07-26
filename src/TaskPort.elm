@@ -1,11 +1,10 @@
 module TaskPort exposing 
-  ( Error(..), InteropError(..), JSError(..), JSErrorRecord
-  , Namespace, Version, FunctionName, QualifiedName, inNamespace
+  ( Error(..), InteropError(..), JSError(..), JSErrorRecord, Result, Task
+  , Namespace, Version, FunctionName, QualifiedName, inNamespace, noNamespace
   , ignoreValue
-  , interopErrorToString, jsErrorToString, errorToString, jsErrorDecoder
+  , interopErrorToString, errorToString
   , call, callNoArgs
   , callNS, callNoArgsNS
-  , tests
   )
 
 {-| This module allows to invoke JavaScript functions using the Elm's Task abstraction,
@@ -20,16 +19,12 @@ Refer to the [README](https://github.com/lobanov/elm-taskport/blob/main/README.m
 @docs FunctionName, call, callNoArgs, ignoreValue
 
 # Error handling
-@docs Error, JSError, JSErrorRecord, InteropError, jsErrorDecoder, interopErrorToString, jsErrorToString, errorToString
+@docs Error, Result, Task, JSError, JSErrorRecord, InteropError, interopErrorToString, errorToString
 
 # Package development
 Make sure you read section on package development in the README.
 
-@docs QualifiedName, Namespace, Version, inNamespace, callNS, callNoArgsNS
-
-# Tests
-We are exposing tests suite to help test module's implementation details.
-@docs tests
+@docs QualifiedName, Namespace, Version, noNamespace, inNamespace, callNS, callNoArgsNS
 
 -}
 
@@ -38,12 +33,9 @@ import Json.Encode as JE
 import Json.Decode as JD
 import Http
 import Test exposing (..)
-import Expect
-import Dict
 
 moduleVersion : String
 moduleVersion = "1.2.1"
-
 
 {-| Alias for `String` type representing a namespace for JavaScript interop functions.
 Namespaces are typically used by Elm package developers, and passed as a paramter to `QualifiedName`.
@@ -77,28 +69,66 @@ type QualifiedName = DefaultNS FunctionName | WithNS Namespace Version FunctionN
 inNamespace : Namespace -> Version -> FunctionName -> QualifiedName
 inNamespace ns v fn = WithNS ns v fn
 
+{-| Constructs a `QualifiedName` for a function in the default namespace.
+It's better to use non-namespace-aware `call` or `callNoArgs` function, but
+it's provided for completeness.
+-}
+noNamespace : FunctionName -> QualifiedName
+noNamespace fn = DefaultNS fn
+
 {-| A structured error describing exactly how the interop call failed. You can use
 this to determine the best way to react to and recover from the problem.
 
-CallError prefix is for errors explicitly sent from the JavaScript side. The error information
+`JSError` variant is for errors explicitly sent from the JavaScript side. The error information
 will be specific to the interop use case, and it should be reconsituted from a JSON payload.
 
-InteropError prefix is for the failures of the interop mechanism itself.
+`InteropError` variant is for the failures of the interop mechanism itself.
 -}
-type Error x
+type Error
     = InteropError InteropError
-    | CallError x
+    | JSError JSError
+
+{-| Convenience alias for a `Result` obtained from passing a `Task` created by one of
+the variants of the `TaskPort.call` function to `Task.attempt'. Application code may be simplified,
+because TaskPort always uses `TaskPort.Error` for `Result.Err`.
+
+    type Msg = GotResult TaskPort.Result String
+
+    Task.attempt GotResult TaskPort.call { {- ... call details ... -} } args
+
+Writing `TaskPort.Result value` is equivalent to writing `Result TaskPort.Error value`.
+-}
+type alias Result value = Result.Result Error value
+
+{-| Convenience alias for a `Task`created by one of the variants of the `TaskPort.call` function.
+Application code may be simplified, because TaskPort always uses `TaskPort.Error` for the error parameter of the Tasks it creates.
+
+    callJSFunction : String -> TaskPort.Task String
+    callJSFunction arg = TaskPort.call { {- ... call details ... -} } arg
+
+Writing `TaskPort.Task value` is equivalent to writing `Task TaskPort.Error value`.
+-}
+type alias Task value = Task.Task Error value
 
 {-| Subcategory of errors indicating a failure of the interop mechanism itself.
 These errors are generally not receoverable, but you can use them to allow the application to fail gracefully,
 or at least provide useful context for debugging, for which you can use helper function `interopErrorToString`.
+
+Interop calls can fail for various reasons:
+* `NotInstalled`: JavaScript companion code responsible for TaskPort operations is missing or not working correctly,
+which means that no further interop calls can succeed.
+* `NotFound`: TaskPort was unable to find a registered function name, which means that no further calls to that function can succeed.
+String value will contain further details of the error.
+* `NotCompatible`: JavaScript and Elm code are not compatible. String value will contain further details of the error.
+* `CannotDecodeValue`: value returned by the JavaScript function cannot be decoded with a given JSON decoder.
+String value will contain the returned value verbatim, and `Json.Decode.Error` will contain the error details.
+* `RuntimeError`: some other unexpected failure of the interop mechanism. String value will contain further details of the error.
 -}
 type InteropError
-  = FunctionNotFound
-  | NotInstalled
-  | VersionMismatch
-  | CannotDecodeResponse JD.Error String
-  | CannotDecodeError JD.Error String
+  = NotInstalled
+  | NotFound String
+  | NotCompatible String
+  | CannotDecodeValue JD.Error String
   | RuntimeError String
 
 {-| In most cases instances of `InteropError` indicate a catastrophic failure in the
@@ -118,48 +148,43 @@ something like this:
 interopErrorToString : InteropError -> String
 interopErrorToString error =
   case error of
-    FunctionNotFound -> "FunctionNotFound: attempted to call unknown function."
     NotInstalled -> "NotInstalled: TaskPort JS component is not installed."
-    VersionMismatch -> "VersionMismatch: TaskPort JS component version is different from the Elm package version."
-    CannotDecodeResponse err body
-      -> "CannotDecodeResponse: unable to decode function response.\n"
-      ++ "Response:\n" ++ body ++ "\n\n"
-      ++ "Error:\n" ++ (JD.errorToString err)
-    CannotDecodeError err body
-      -> "CannotDecodeError: unable to decode function error.\n"
-      ++ "Response:\n" ++ body ++ "\n\n"
-      ++ "Error:\n" ++ (JD.errorToString err)
-    RuntimeError message -> "RuntimeError: " ++ message
-
+    NotFound msg -> "NotFound: " ++ msg
+    NotCompatible msg -> "NotCompatible: " ++ msg
+    CannotDecodeValue err value
+      -> "CannotDecodeValue: unable to decode JavaScript function return value.\n"
+      ++ "Value:\n" ++ value ++ "\n\n"
+      ++ "Decoding error:\n" ++ (JD.errorToString err)
+    RuntimeError msg -> "RuntimeError: " ++ msg
 
 {-| Generic type representing all possibilities that could be returned from an interop call.
 JavaScript is very lenient regarding its errors. Any value could be thrown, and, if the JS code
 is asynchronous, the `Promise` can reject with any value. TaskPort always attempts to decode erroneous
-results returned from iterop calls using `ErrorObject` variant and `JSErrorRecord` structure, which
-contains standard fields for JavaScript `Error` object, but if itsn't possible, it will resorts to
-`ErrorValue` variant followed by the JSON value as-is. 
+results returned from iterop calls using `ErrorObject` variant followed by `JSErrorRecord` structure, which
+contains standard fields for JavaScript `Error` object, but if that isn't possible, it resorts to
+`ErrorValue` variant followed by the JSON value as-is.
 
-In most cases you would pass values of this type to `jsErrorToString` to create
+In most cases you would pass values of this type to `errorToString` to create
 a useful diagnostic information, but you might also have a need to handle certain types
 of errors in a particular way. To make that easier, `ErrorObject` variant lifts up the error
 name to aid pattern-match for error types. You may do something like this:
 
     case error of
-        CallError (ErrorObject "VerySpecificError" _) -> -- handle a particular subtype of Error thrown by the JS code
+        JSError (ErrorObject "VerySpecificError" _) -> -- handle a particular subtype of Error thrown by the JS code
         _ -> -- respond to the error in a generic way, e.g show a diagnostic message
 -}
 type JSError = ErrorObject String JSErrorRecord | ErrorValue JE.Value
 
-{-| Structure describing an object conforming to JavaScript standard for `Error`.
+{-| Structure describing an object conforming to JavaScript standard for the `Error` object.
 Unless you need to handle very specific failure condition in a particular way, you are unlikely
-to use this type.
+to use this type directly.
 
 The structure contains the following fields:
 * `name` represents the type of the `Error` object, e.g. `ReferenceError`
-* `message` is a free-form string typically passed as a parameter to the error constructor
+* `message` is a free-form and potentially empty string typically passed as a parameter to the error constructor
 * `stackLines` is a platform-specific stack trace for the error
-* `cause` optional nested error object, which is first attempted to be decoded as a `JSErrorRecord`, but
-falls back to `JSError.ErrorValue` if that's impossible.
+* `cause` is an optional nested error object, which is first attempted to be decoded as a `JSErrorRecord`, but
+falls back to `JSError.ErrorValue` if that's not possible.
 -}
 type alias JSErrorRecord =
   { name : String
@@ -168,16 +193,6 @@ type alias JSErrorRecord =
   , cause : Maybe JSError
   }
 
-{-| Generates a human-readable and hopefully helpful string with diagnostic information
-describing a `JSError`. It produces multiple lines of output, so you may want to peek at it with
-something like this:
-
-    import Html
-
-    errorToHtml : TaskPort.JSError -> Html.Html msg
-    errorToHtml error =
-      Html.pre [] [ Html.text (TaskPort.jsErrorToString error) ]
--}
 jsErrorToString : JSError -> String
 jsErrorToString error =
   case error of
@@ -187,9 +202,6 @@ jsErrorToString error =
       ++ (String.join "\n" o.stackLines)
       ++ Maybe.withDefault "" (Maybe.map (\cause -> "\nCaused by:\n" ++ jsErrorToString cause) o.cause)
 
-{-| JSON decoder that constructs a `JSError` value from erroneous results returned by an interop call.
-You would pass it to `TaskPort.call` or `TaskPort.callNoArgs`.
--}
 jsErrorDecoder : JD.Decoder JSError
 jsErrorDecoder = 
   JD.oneOf
@@ -211,17 +223,23 @@ jsErrorRecordDecoder =
       ]
     ))
 
-{-| Convenience method for creating a user-presentable string describing an error
-which occured during an interop call in case use `jsErrorDecoder` in your interop calls.
+{-| Generates a human-readable and hopefully helpful string with diagnostic information
+describing an error. It produces multiple lines of output, so you may want to peek at it with
+something like this:
+
+    import Html
+
+    errorToHtml : TaskPort.JSError -> Html.Html msg
+    errorToHtml error =
+      Html.pre [] [ Html.text (TaskPort.jsErrorToString error) ]
 -}
-errorToString : Error JSError -> String
+errorToString : Error -> String
 errorToString error =
   case error of
     InteropError e -> interopErrorToString e
-    CallError e -> jsErrorToString e
+    JSError e -> jsErrorToString e
 
-
-{-| JSON decoder that can be used with as a `bodyDecoder` parameter when calling JavaScript functions
+{-| JSON decoder that can be used with as a `valueDecoder` parameter when calling JavaScript functions
 that are not expected to return a value, or where the return value can be safely ignored.
 -}
 ignoreValue : JD.Decoder ()
@@ -238,58 +256,84 @@ Here is a simple example that creates a `Cmd` invoking a registered JavaScript f
 and produces a message `GotPong` with a `Result`, containing either an `Ok` variant with a string (determined by the first decoder argument),
 or an `Err`, containing a `TaskPort.Error` describing what went wrong.
 
-    type Msg = GotWidgetName (Result String String)
+    type Msg = GotWidgetName (TaskPort.Result String)
 
-    TaskPort.call "getWidgetNameByIndex" Json.Decode.string TaskPort.jsErrorDecoder Json.Encode.int 0
-        |> Task.attempt GotWidgetName
+    TaskPort.call
+        { function = "getWidgetNameByIndex"
+        , valueDecoder = Json.Decode.string
+        , argsEncoder = Json.Encode.int
+        }
+        0
+            |> Task.attempt GotWidgetName
 
 The `Task` abstraction allows to effectively compose chains of tasks without creating many intermediate variants in the Msg type, and
 designing the model to deal with partially completed call chain. The following example shows how this might be used
 when working with a hypothetical 'chatty' JavaScript API, requiring to call `getWidgetsCount` function to obtain a number
 of widgets, and then call `getWidgetName` with each widget's index to obtain its name.
 
-    type Msg = GotWidgets (Result String (List String))
+    type Msg = GotWidgets (Result (List String))
     
-    TaskPort.callNoArgs "getWidgetsCount" Json.Decode.int TaskPort.jsErrorDecoder
+    getWidgetsCount : TaskPort.Task Int
+    getWidgetsCount = TaskPort.callNoArgs 
+        { function = "getWidgetsCount"
+        , valueDecoder = Json.Decode.int
+        }
+
+    getWidgetNameByIndex : Int -> TaskPort.Task String
+    getWidgetNameByIndex = TaskPort.call
+        { function = "getWidgetNameByIndex"
+        , valueDecoder = Json.Decode.string
+        , argsEncoder = Json.Encode.int
+        } -- notice currying to return a function taking Int and producing a Task
+
+    getWidgetsCount
         |> Task.andThen
             (\count ->
                 List.range 0 (count - 1)
-                    |> List.map Json.Encode.int
-                    |> List.map (TaskPort.call "getWidgetNameByIndex" Json.Decode.string TaskPort.jsErrorDecoder)
+                    |> List.map getWidgetNameByIndex
                     |> Task.sequence
             )
         |> Task.attempt GotWidgets
 
-The resulting task has type `Task (TaskPort.Error String) (List String)`, which could be attempted as a single command,
+The resulting task has type `TaskPort.Task (List String)`, which could be attempted as a single command,
 which, if successful, provides a handy `List String` with all widget names.
-
-**Note that specifying any `errorDecoder` other than `TaskPort.jsErrorDecoder` is deprecated, and this paramter will be removed in future.**
 -}
-call : String -> (JD.Decoder body) -> (JD.Decoder error) -> (args -> JE.Value) -> args -> Task.Task (Error error) body
-call functionName bodyDecoder errorDecoder argsEncoder args = callNS
-  { function = DefaultNS functionName
-  , bodyDecoder = bodyDecoder
-  , errorDecoder = errorDecoder
-  , argsEncoder = argsEncoder
+call :
+  { function : FunctionName
+  , valueDecoder : JD.Decoder value
+  , argsEncoder : (args -> JE.Value)
   }
-  args
+  -> args
+  -> Task value
+call details args = 
+  callNS
+    { function = DefaultNS details.function
+    , valueDecoder = details.valueDecoder
+    , argsEncoder = details.argsEncoder
+    }
+    args
 
 {-| Special version of the `call` that reduces amount of boilerplate code required when calling JavaScript functions
-that don't take any parameters. It is eqivalent of passing `Json.Encoder.null` into the `call`.
+that don't take any parameters.
 
-    type Msg = GotWidgetsCount (Result String Int)
+    type Msg = GotWidgetsCount (TaskPort.Result Int)
 
-    TaskPort.callNoArgs "getWidgetsCount" Json.Decode.int TaskPort.jsErrorDecoder
-        |> Task.attempt GotWidgetsCount
-
-**Note that specifying any `errorDecoder` other than `TaskPort.jsErrorDecoder` is deprecated, and this paramter will be removed in future.**
+    TaskPort.callNoArgs
+        { function = "getWidgetsCount"
+        , valueDecoder = Json.Decode.int
+        }
+          |> Task.attempt GotWidgetsCount
 -}
-callNoArgs : String -> (JD.Decoder body) -> (JD.Decoder error) -> Task.Task (Error error) body
-callNoArgs functionName bodyDecoder errorDecoder = callNoArgsNS
-  { function = DefaultNS functionName
-  , bodyDecoder = bodyDecoder
-  , errorDecoder = errorDecoder
+callNoArgs :
+  { function : FunctionName
+  , valueDecoder : JD.Decoder value
   }
+  -> Task value
+callNoArgs details = 
+  callNoArgsNS
+    { function = DefaultNS details.function
+    , valueDecoder = details.valueDecoder
+    }
 
 {-| Creates a Task encapsulating an asyncronous invocation of a particular JavaScript function.
 It behaves similarly to `call`, but this function is namespace-aware and is intended to be used
@@ -300,23 +344,20 @@ Unlike `call`, this function uses a record to specify the details of the interop
 
     TaskPort.callNS
         { function = TaskPort.WithNS "elm-package/namespace" "1.0.0" "setWidgetName"
-        , bodyDecoder = TaskPort.ignoreValue -- expecting no return value
-        , errorDecoder = TaskPort.jsErrorDecoder
+        , valueDecoder = TaskPort.ignoreValue -- expecting no return value
+        , argsEncoder = Json.Encoder.string
         }
-        Json.Encoder.string "new name"
-        |> Task.attempt WidgetNameUpdated
-
-**Note that specifying any `errorDecoder` other than `TaskPort.jsErrorDecoder` is deprecated, and this paramter will be removed in future.**
+        "new name"
+            |> Task.attempt WidgetNameUpdated
 -}
 callNS : 
   { function : QualifiedName
-  , bodyDecoder : JD.Decoder body
-  , errorDecoder : JD.Decoder error
+  , valueDecoder : JD.Decoder value
   , argsEncoder : (args -> JE.Value)
   }
   -> args
-  -> Task.Task (Error error) body
-callNS details args = Http.task <| buildHttpCall details.function details.bodyDecoder details.errorDecoder <| details.argsEncoder args
+  -> Task value
+callNS details args = Http.task <| buildHttpCall details.function details.valueDecoder <| details.argsEncoder args
 
 {-| Creates a Task encapsulating an asyncronous invocation of a particular JavaScript function without parameters.
 It behaves similarly to `callNoArgs`, but this function is namespace-aware and is intended to be used
@@ -327,36 +368,32 @@ Unlike `callNoArgs`, this function uses a record to specify the details of the i
 
     TaskPort.callNoArgsNS
         { function = TaskPort.WithNS "elm-package/namespace" "1.0.0" "getWidgetName"
-        , bodyDecoder = Json.Decoder.string -- expecting a string
-        , errorDecoder = TaskPort.jsErrorDecoder
+        , valueDecoder = Json.Decoder.string -- expecting a string
         }
-        |> Task.attempt GotWidgetName
-
-**Note that specifying any `errorDecoder` other than `TaskPort.jsErrorDecoder` is deprecated, and this paramter will be removed in future.**
+            |> Task.attempt GotWidgetName
 -}
 callNoArgsNS : 
   { function : QualifiedName
-  , bodyDecoder : JD.Decoder body
-  , errorDecoder : JD.Decoder error
+  , valueDecoder : JD.Decoder value
   }
-  -> Task.Task (Error error) body
-callNoArgsNS details = Http.task <| buildHttpCall details.function details.bodyDecoder details.errorDecoder JE.null
+  -> Task value
+callNoArgsNS details = Http.task <| buildHttpCall details.function details.valueDecoder JE.null
 
-type alias HttpTaskArgs x a =
+type alias HttpTaskArgs a =
   { method : String
   , headers : List Http.Header
   , url : String
   , body : Http.Body
-  , resolver : Http.Resolver (Error x) a
+  , resolver : Http.Resolver Error a
   , timeout : Maybe Float }
 
-buildHttpCall : QualifiedName -> (JD.Decoder body) -> (JD.Decoder error) -> JE.Value -> HttpTaskArgs error body
-buildHttpCall function bodyDecoder errorDecoder args =
+buildHttpCall : QualifiedName -> (JD.Decoder value) -> JE.Value -> HttpTaskArgs value
+buildHttpCall function valueDecoder args =
   { method = "POST"
   , headers = []
   , url = buildCallUrl function
   , body = Http.jsonBody args
-  , resolver = Http.stringResolver (resolveResponse bodyDecoder errorDecoder)
+  , resolver = Http.stringResolver (resolveResponse valueDecoder)
   , timeout = Nothing
   }
 
@@ -366,70 +403,31 @@ buildCallUrl function =
     DefaultNS name -> "elmtaskport:///" ++ name ++ "?v=" ++ moduleVersion
     WithNS ns nsVersion name -> "elmtaskport://" ++ ns ++ "/" ++ name ++ "?v=" ++ moduleVersion ++ "&nsv=" ++ nsVersion
 
-resolveResponse : JD.Decoder a -> JD.Decoder x -> Http.Response String -> Result (Error x) a
-resolveResponse bodyDecoder errorDecoder res =
+resolveResponse : JD.Decoder a -> Http.Response String -> Result a
+resolveResponse valueDecoder res =
   case res of
     Http.BadUrl_ url -> runtimeError <| "bad url " ++ url
     Http.Timeout_ -> runtimeError "timeout"
     Http.NetworkError_ -> Result.Err (InteropError NotInstalled)
     Http.BadStatus_ {statusCode} body -> 
       if (statusCode == 400) then
-        Result.Err (InteropError VersionMismatch)
+        Result.Err (InteropError (NotCompatible body))
       else if (statusCode == 404) then
-        Result.Err (InteropError FunctionNotFound)
+        Result.Err (InteropError (NotFound body))
       else if (statusCode == 500) then
-        case JD.decodeString errorDecoder body of
-          Result.Ok errorValue -> Result.Err (CallError errorValue)
-          Result.Err decodeError -> Result.Err (InteropError <| CannotDecodeError decodeError body)
+        case JD.decodeString jsErrorDecoder body of
+          Result.Ok errorValue -> Result.Err (JSError errorValue)
+          Result.Err decodeError -> Result.Err (InteropError <| RuntimeError <| JD.errorToString decodeError)
       else
         runtimeError <| "unexpected status " ++ String.fromInt statusCode
     Http.GoodStatus_ _ body -> 
-      case JD.decodeString bodyDecoder body of
+      case JD.decodeString valueDecoder body of
         Result.Ok returnValue -> Result.Ok returnValue
-        Result.Err decodeError -> Result.Err (InteropError <| CannotDecodeResponse decodeError body)
+        Result.Err decodeError -> Result.Err (InteropError <| CannotDecodeValue decodeError body)
 
-runtimeError : String -> Result (Error x) a
-runtimeError msg = Result.Err <|
-  InteropError <|
-    RuntimeError <|
-      ("Runtime error in JavaScript interop: " ++ msg ++ ". JavaScript console may contain more information about the issue.")
-
-
-{-| This is an embedded tests suite allowing to test module-internal logic. No need to use this. -}
-tests : Test
-tests = describe "test"
-  [ test "runtimeError" <|
-    \_ -> case runtimeError "(error)" of
-        Result.Err (InteropError (RuntimeError msg)) -> Expect.true "error should contain the message" (String.contains "(error)" msg)
-        _ -> Expect.fail "Must produce an error"
-  , test "buildHttpCall" <|
-    \_ -> case buildHttpCall (DefaultNS "function123") JD.string JD.string (JE.string "args") of
-        {method, url, timeout} -> (method, url, timeout) |> Expect.equal ( "POST", buildCallUrl (DefaultNS "function123"), Nothing )
-  , describe "resolveResponse"
-    [ test "good response" <|
-      \_ -> let response = Http.GoodStatus_ { url = buildCallUrl (DefaultNS "fn"), statusCode = 200, statusText = "", headers = Dict.empty } "123"
-            in case resolveResponse JD.int JD.int response of
-              Result.Ok (value) -> value |> Expect.equal 123
-              _ -> Expect.fail "unexpected outcome for good response"
-    , test "exception response" <|
-      \_ -> let response = Http.BadStatus_ { url = buildCallUrl (DefaultNS "fn"), statusCode = 500, statusText = "", headers = Dict.empty } "321"
-            in case resolveResponse JD.int JD.int response of
-              Result.Err (CallError value) -> value |> Expect.equal 321
-              _ -> Expect.fail "unexpected outcome for exception response"
-    , test "module version mismatch" <|
-      \_ -> let response = Http.BadStatus_ { url = buildCallUrl (DefaultNS "fn"), statusCode = 400, statusText = "", headers = Dict.empty } ""
-            in case resolveResponse JD.int JD.int response of
-              Result.Err (InteropError VersionMismatch) -> Expect.pass
-              _ -> Expect.fail "unexpected outcome for exception response"
-    , test "function not found" <|
-      \_ -> let response = Http.BadStatus_ { url = buildCallUrl (DefaultNS "fn"), statusCode = 404, statusText = "", headers = Dict.empty } ""
-            in case resolveResponse JD.int JD.int response of
-              Result.Err (InteropError FunctionNotFound) -> Expect.pass
-              _ -> Expect.fail "unexpected outcome for exception response"
-    , test "interop not installed" <|
-      \_ -> let response = Http.NetworkError_
-            in case resolveResponse JD.int JD.int response of
-              Result.Err (InteropError NotInstalled) -> Expect.pass
-              _ -> Expect.fail "unexpected outcome for exception response"
-    ]
-  ]
+runtimeError : String -> Result a
+runtimeError msg = 
+  Result.Err <|
+    InteropError <|
+      RuntimeError <|
+        ("Runtime error in JavaScript interop: " ++ msg ++ ". JavaScript console may contain more information about the issue.")

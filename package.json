@@ -26,7 +26,7 @@
     "xmlhttprequest": "^1.8.0"
   },
   "scripts": {
-    "unit-test": "elm-test src/*.elm && npx jest",
+    "unit-test": "npx jest",
     "prebuild": "yarn unit-test",
     "build": "npx webpack",
     "copy-dist-to-test": "cp -f dist/taskport.min.js test/build",
