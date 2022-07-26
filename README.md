@@ -114,34 +114,35 @@ TaskPort wraps each call of JavaScript functions into a [Task](https://package.e
 
 For simple no-argument calls use `TaskPort.callNoArgs`.
 ```elm
-type Msg = GotWidgetsCount (Result String Int)
+type Msg = GotWidgetsCount (Result (TaskPort.Error TaskPort.JSError) Int)
 
-TaskPort.callNoArgs "getWidgetsCount" Json.Decode.int Json.Decode.string
+TaskPort.callNoArgs "getWidgetsCount" Json.Decode.int TaskPort.jsErrorDecoder
     |> Task.attempt GotWidgetsCount
 ```
 
 For functions that take arguments use `TaskPort.call`.
 
 ```elm
-type Msg = GotWidgetName (Result String String)
+type Msg = GotWidgetName (Result (TaskPort.Error TaskPort.JSError) String)
 
-TaskPort.callNoArgs "getWidgetNameByIndex" Json.Decode.string Json.Decode.string Json.Encode.int 0
+TaskPort.callNoArgs "getWidgetNameByIndex" Json.Decode.string TaskPort.jsErrorDecoder Json.Encode.int 0
     |> Task.attempt GotWidgetName
 ```
 
 You can use `Task.andThen`, `Task.sequence`, and other functions to chain multiple calls.
 
 ```elm
-type Msg = GotWidgets (Result String (List String))
+type Msg = GotWidgets (Result (TaskPort.Error TaskPort.JSError) (List String))
 
-TaskPort.callNoArgs "getWidgetsCount" Json.Decode.int Json.Decode.string
+TaskPort.callNoArgs "getWidgetsCount" Json.Decode.int TaskPort.jsErrorDecoder
     |> Task.andThen
         (\count ->
             List.range 0 (count - 1)
                 |> List.map Json.Encode.int
-                |> List.map (TaskPort.call "getWidgetNameByIndex" Json.Decode.string Json.Decode.string)
+                |> List.map (TaskPort.call "getWidgetNameByIndex" Json.Decode.string TaskPort.jsErrorDecoder)
                 |> Task.sequence
         )
+    |> Task.attempt GotWidgets
 ```
 
 ### Handling errors
@@ -158,7 +159,7 @@ You can use full machinery of the [Result module](https://package.elm-lang.org/p
 
 Interop errors are generally not recoverable, but you can use them to allow the application to fail gracefully, or at least provide useful context for debugging. The latter is aided by the helper function `TaskPort.interopErrorToString`.
 
-TaskPort also provides `TaskPort.jsErrorDecoder` value, which is a JSON decoder for errors that may be returned from JS interop calls. It models various error types, so it's likely you would never need to implement your own decoder. If you specify it as a parameter for `TaskPort.call` or `TaskPort.callNoArgs`, you would get `TaskPort.JSError` value in case of a failure, which you can explore and interact with using a variety of helper methods. See the documentation for `TaskPort.JSError` for more information.
+TaskPort provides `TaskPort.jsErrorDecoder` value, which is a JSON decoder for errors that may be returned from JS interop calls. It models various error types, so it's likely you would never need to implement your own decoder. If you specify it as a parameter for `TaskPort.call` or `TaskPort.callNoArgs`, you would get `TaskPort.JSError` value in case of a failure, which you can explore and interact with using a variety of helper methods. See the documentation for `TaskPort.JSError` for more information. **Specifying any `errorDecoder` other than `TaskPort.jsErrorDecoder` is deprecated, and this paramter will be removed in future.**
 
 Using TaskPort in Elm packages
 ------------------------------
