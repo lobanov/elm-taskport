@@ -82,7 +82,7 @@ update msg model =
       Case8 testId res ->
         [ expectJSError testId (makeJSErrorWithACause "Error" "expected" (makeJSError "Error" "nested")) res |> reportTestResult
         , TaskPort.callNS
-            { function = TaskPort.WithNS "test/test" "123" "echo"
+            { function = TaskPort.inNamespace "test/test" "123" "echo"
             , bodyDecoder = JD.string
             , errorDecoder = TaskPort.jsErrorDecoder
             , argsEncoder = JE.string
@@ -94,7 +94,7 @@ update msg model =
       Case9 testId res ->
         [ expect testId identity TaskPort.jsErrorToString "hello" res |> reportTestResult
         , TaskPort.callNoArgsNS
-            { function = TaskPort.WithNS "test/test" "123" "notRegistered"
+            { function = TaskPort.inNamespace "test/test" "123" "notRegistered"
             , bodyDecoder = JD.string
             , errorDecoder = TaskPort.jsErrorDecoder
             }
@@ -104,7 +104,7 @@ update msg model =
       Case10 testId res ->
         [ expectInteropError testId (TaskPort.FunctionNotFound) res |> reportTestResult
         , TaskPort.callNoArgsNS
-            { function = TaskPort.WithNS "test/test" "321" "notRegistered"
+            { function = TaskPort.inNamespace "test/test" "321" "notRegistered"
             , bodyDecoder = JD.string
             , errorDecoder = TaskPort.jsErrorDecoder
             }

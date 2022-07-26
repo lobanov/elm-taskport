@@ -1,6 +1,6 @@
 module TaskPort exposing 
   ( Error(..), InteropError(..), JSError(..), JSErrorRecord
-  , Namespace, Version, FunctionName, QualifiedName(..)
+  , Namespace, Version, FunctionName, QualifiedName, inNamespace
   , ignoreValue
   , interopErrorToString, jsErrorToString, errorToString, jsErrorDecoder
   , call, callNoArgs
@@ -23,7 +23,9 @@ Refer to the [README](https://github.com/lobanov/elm-taskport/blob/main/README.m
 @docs Error, JSError, JSErrorRecord, InteropError, jsErrorDecoder, interopErrorToString, jsErrorToString, errorToString
 
 # Package development
-@docs QualifiedName, Namespace, Version, callNS, callNoArgsNS
+Make sure you read section on package development in the README.
+
+@docs QualifiedName, Namespace, Version, inNamespace, callNS, callNoArgsNS
 
 # Tests
 We are exposing tests suite to help test module's implementation details.
@@ -66,6 +68,14 @@ type alias FunctionName = String
 {-| Represents the name of a function that may optionally be qualified with a versioned namespace.
 -}
 type QualifiedName = DefaultNS FunctionName | WithNS Namespace Version FunctionName
+
+{-| Constructs a `QualifiedName` for a function in a particular versioned namespace.
+
+    "functionName" |> inNamespace "author/package" "version" -- infix notation reads better...
+    inNamespace "author/package" "version" "functionName" -- ... but this also works
+-}
+inNamespace : Namespace -> Version -> FunctionName -> QualifiedName
+inNamespace ns v fn = WithNS ns v fn
 
 {-| A structured error describing exactly how the interop call failed. You can use
 this to determine the best way to react to and recover from the problem.
