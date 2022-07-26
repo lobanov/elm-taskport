@@ -3,7 +3,7 @@ import { Namespace } from './namespace.js';
 
 const MODULE_VERSION = "1.2.1";
 
-const defaultNamespace = new Namespace(null);
+const defaultNamespace = new Namespace('unversioned');
 const namespaces = {};
 
 /** Returns a promise regardless of the return value of the fn */
