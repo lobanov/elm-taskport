@@ -1,6 +1,9 @@
 
 export function Namespace(version) {
-  // TODO validate input
+  if (typeof version !== 'string' || !version.match(/^[\w-.]+$/)) {
+    throw new Error('Invalid namespace version: ' + version);
+  }
+  
   this.version = version;
   this.functions = {};
 

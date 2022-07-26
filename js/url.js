@@ -11,10 +11,13 @@ export const URL_PREFIX = "elmtaskport://"
  */
 export function parseUrl(url) {
   const m = url.match(/^elmtaskport:\/\/([\w-]+\/[\w-]+)?\/([\w]+)\?v=(\d\.\d\.\d)(?:&nsv=([\w.-]+))?$/);
-  if (m === undefined) {
+  if (!m) {
     return;
   }
 
   const [_, namespaceName, functionName, apiVersion, namespaceVersion] = m;
+  if (namespaceName !== undefined && namespaceVersion === undefined) {
+    return;
+  }
   return { namespaceName, namespaceVersion, apiVersion, functionName };
 }
