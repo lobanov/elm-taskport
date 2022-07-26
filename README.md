@@ -164,26 +164,70 @@ TaskPort provides `TaskPort.jsErrorDecoder` value, which is a JSON decoder for e
 Using TaskPort in Elm packages
 ------------------------------
 
-If you are looking to use TaskPort in an Elm package which could be used by many Elm applications, there are few important considerations you need to keep in mind.
+If you are looking to use TaskPort in an Elm package which could be used by many Elm applications, you have to be mindful of the fact that currently there is no standard mechanism to bundle JavaScript code with an Elm package. This effectively means that it's the responsibility of the developer, who would be using your package in their Elm application, to obtain and deploy correct JavaScript code required for your Elm package to work. As an Elm package developer, you have no direct control over that. Your Elm package documentation should explain how to obtain and deploy the correct version of the JavaScript code similarly to how this page does it (see [Installation](#installation)). However, it is also prudent to implement a safeguard that would detect incompatibility between the JavaScript code and the Elm package and provide a helpful diagnostic message.
 
-* Installation by application developer
-* Keeping Elm and JS code in sync
-* Distributing Elm and JS code
+Another problem to watch out for is the potential for clashing names with JavaScript interop functions registered by another Elm packages and the application itself. Interop function name clashes between two Elm packages would be particularly problematic for an application developer, as they would have no control over the function names.
 
-Reference example [lobanov/elm-localstorage](https://github.com/lobanov/elm-localstorage).
+TaskPort provides an out-of-the-box support for Elm package developers with *function namespaces*, which is a mechanism preventing interop function name clashes, as well as a safeguard ensuring Elm and JavaScript interop code is in sync. Elm package developers should register their interop JavaScript functions in their package's namespace and provide a version number for the namespace, and TaskPort will keep registered functions separate and eagerly check if JavaScript code has the same version as the Elm package expects it to be.
 
-### Calling JS functions in a namespace
+The following sections explain how to use TaskPort function namespaces. You can also check out [lobanov/elm-localstorage](https://github.com/lobanov/elm-localstorage) package for an example of using this mechanism.
+
+### Registering JavaScript interop functions in a namespace
+
+It is recommended to create a single `install` function that would register all JavaScript interop functions required for the package to work. That function would call `TaskPort.createNamespace()` function to create a new namespace, and register interop functions required by your Elm package in it.
+
+TaskPort expects function namespaces to be called after Elm package names, but does not enforce any versioning schema. In most cases you would want to use your Elm package version number, but if you are wrapping a third-party JavaScript API, it may be sufficient to just use the API version.
 
 ```js
-const ns = TaskPort.createNamespace("lobanov/elm-localstorage", "v1"); // "v1" is a version of the JS API for the Elm package
-ns.register("localGet", function(key) => { /* function body */ });
-ns.register("localPut", function([key, value]) => { /* function body */ });
+export function install(TaskPort) {
+    const ns = TaskPort.createNamespace("author/elm-package", "v1");
+    // TaskPort will refer to this function using it's fully qualified name author/elm-package/functionName
+    ns.register("functionName", function(args) => { /* function body */ });
+}
 ```
 
-```elm
-import TaskPort exposing (Error, JSError, jsErrorDecoder)
-import Json.Encoder exposing (Value, value, string)
+### Calling namespaced interop functions from Elm
 
-localGet : String -> Task (Error JSError) Value
-localGet key = TaskPort.call ( "lobanov/elm-localstorage", "v1" ) "localGet" value jsErrorDecoder string key
+Instead of using `call` or `callNoArgs` functions directly, Elm packages should use namespace-aware versions of those functions: `callNS` and `callNoArgsNS` respectively. Note that Elm packages are unlikely need to go beyond creating a `Task` for the interop call (potentially chained with other tasks with `Task.andThen`) and returning them to the application code.
+
+```elm
+import Task exposing (Task)
+import TaskPort exposing (Error, JSError, callNS, callNoArgsNS, qualified)
+
+getWidgetsCount : Task (Error JSError) Int
+getWidgetsCount = callNoArgsNS
+    { function = qualified "author/elm-package" "v1" "getWidgetsCount"
+    , bodyDecoder = Json.Decode.int,
+    , errorDecoder = TaskPort.jsErrorDecoder
+    }
+
+getWidgetNameByIndex : Int -> Task (Error JSError) String
+getWidgetNameByIndex widgetIndex = callNS
+    { function = qualified "author/elm-package" "v1" "getWidgetNameByIndex"
+    , bodyDecoder = Json.Decode.string,
+    , errorDecoder = TaskPort.jsErrorDecoder,
+    , argsEncoder = Json.Encode.int
+    }
+    widgetIndex
+
+-- more useful in this case would be to chain calls together
+getWidgetNames : Task (Error JSError) (List String)
+getWidgetNames = getWidgetsCount
+    |> andThen
+        (\count ->
+            List.range 0 (count - 1)
+                |> List.map getWidgetNameByIndex
+                |> Task.sequence
+        )
+```
+
+Elm application developer using a package providing this hypothetical API would merely need to pass a `Task` created by one of these functions into `Task.attempt` without knowing the details of the underlying JavaScript API.
+
+```elm
+import WidgetModules -- Elm package exposing the above functions
+import TaskPort exposing (Error, JSError)
+
+type Msg = GotWidgets (Result (Error JSError) (List String))
+
+Task.attempt GotWidgets WidgetModules.getWidgetNames -- produces a Cmd
 ```
