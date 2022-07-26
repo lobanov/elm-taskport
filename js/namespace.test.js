@@ -25,6 +25,12 @@ describe("Namespace", () => {
     expect(ns.find('functionName')()).toStrictEqual('result');
   });
 
+  it('should throw if registering a function with a duplicate name', () => {
+    const ns = new Namespace('1.2.3');
+    ns.register('functionName', () => 'result');
+    expect(() => ns.register('functionName', () => 'result')).toThrow();
+  });
+
   it('should throw if registering a function with an invalid name', () => {
     const ns = new Namespace('1.2.3');
     expect(() => ns.register('invalid-name', () => {})).toThrow();
