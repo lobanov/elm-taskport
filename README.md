@@ -192,18 +192,18 @@ Instead of using `call` or `callNoArgs` functions directly, Elm packages should 
 
 ```elm
 import Task exposing (Task)
-import TaskPort exposing (Error, JSError, callNS, callNoArgsNS, qualified)
+import TaskPort exposing (Error, JSError, callNS, callNoArgsNS, inNamespace)
 
 getWidgetsCount : Task (Error JSError) Int
 getWidgetsCount = callNoArgsNS
-    { function = qualified "author/elm-package" "v1" "getWidgetsCount"
+    { function = "getWidgetsCount" |> inNamespace "author/elm-package" "v1"
     , bodyDecoder = Json.Decode.int,
     , errorDecoder = TaskPort.jsErrorDecoder
     }
 
 getWidgetNameByIndex : Int -> Task (Error JSError) String
 getWidgetNameByIndex widgetIndex = callNS
-    { function = qualified "author/elm-package" "v1" "getWidgetNameByIndex"
+    { function = "getWidgetNameByIndex" |> inNamespace "author/elm-package" "v1"
     , bodyDecoder = Json.Decode.string,
     , errorDecoder = TaskPort.jsErrorDecoder,
     , argsEncoder = Json.Encode.int
