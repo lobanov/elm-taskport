@@ -100,7 +100,7 @@ update msg model =
         ] |> Cmd.batch
 
       Case10 testId res ->
-        [ expectInteropError testId (TaskPort.NotFound "notRegistered") res |> reportTestResult
+        [ expectInteropError testId (TaskPort.NotFound "test/test/notRegistered") res |> reportTestResult
         , TaskPort.callNoArgsNS
             { function = "echo" |> TaskPort.inNamespace "test/test" "321"
             , valueDecoder = JD.string
@@ -109,7 +109,7 @@ update msg model =
         ] |> Cmd.batch
 
       Case11 testId res ->
-        [ expectInteropError testId (TaskPort.NotCompatible "msg") res |> reportTestResult
+        [ expectInteropError testId (TaskPort.NotCompatible "test/test/echo") res |> reportTestResult
         , completed "OK"
         ] |> Cmd.batch
   )

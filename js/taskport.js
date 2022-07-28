@@ -82,12 +82,14 @@ export function install(settings, xhrProto) {
           + `Did you update TaskPort package to a new version, but forgot to update the JavaScript code it requires?` ];
 
       } else {
-        const { namespaceName, functionName, apiVersion, namespaceVersion } = parsedUrl;
+        const { namespaceName, functionName, apiVersion, namespaceVersion } = parsedUrl;        
         if (apiVersion !== MODULE_VERSION) {
           this.__elm_taskport_error = [ 400, `TaskPort version conflict. Elm-side is ${apiVersion}, but JavaScript-side is ${MODULE_VERSION}. `
             + `Did you update TaskPort package to a new version, but forgot to update the JavaScript code it requires?` ];
 
         } else if (namespaceName === undefined) {
+          this.__elm_taskport_function_name = functionName
+
           // looking for the function is in the default namespace
           const fn = defaultNamespace.find(functionName);
           if (fn !== undefined) {
@@ -99,6 +101,8 @@ export function install(settings, xhrProto) {
           }
 
         } else {
+          this.__elm_taskport_function_name = namespaceName + "/" + functionName;
+
           // looking for the function in a specified namespace
           if (namespaceName in namespaces) {
             const ns = namespaces[namespaceName];
@@ -157,6 +161,10 @@ export function install(settings, xhrProto) {
         this.status = 200;
         this.__elm_taskport_dispatch_event('load');
       }).catch((err) => {
+        if (globalSettings.logCallErrors) {
+          console.error("JavaScript function " + this.__elm_taskport_function_name + " thrown an error or returned a rejected Promise:", err);
+        }
+
         this.status = 500;
         this.responseType = 'json';
         this.response = JSON.stringify(describeError(err));
@@ -170,12 +178,12 @@ export function install(settings, xhrProto) {
       const [status, message] = this.__elm_taskport_error;
 
       if (globalSettings.logInteropErrors) {
-        console.error("Unable to execute an interop call with the URL " + this.__elm_taskport_url + ". " + message);
+        console.error("Unable to execute the interop call. " + message);
       }
 
       this.status = status;
       this.responseType = 'text';
-      this.response = message
+      this.response = this.__elm_taskport_function_name
       this.__elm_taskport_dispatch_event('load');
     }
   };
