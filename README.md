@@ -9,6 +9,8 @@ If you are upgarding from a previous version, see [CHANGES](https://github.com/l
 
 For the impatient, jump straight to [Installation](#installation) or [Usage](#usage).
 
+If you are developing an Elm package and want to use TaskPort to call JavaScript APIs, jump to [Using TaskPort in Elm packages](#using-taskport-in-elm-packages).
+
 Motivation
 ----------
 
@@ -46,18 +48,18 @@ For browser-based applications which use a bundler like Webpack, TaskPort JavaSc
 npm add --save elm-taskport # or yarn add elm-taskport --save
 ```
 
-This will bring all necessary JavaScript files files into `node_modules/elm-taskport` directory.
+This will bring all necessary JavaScript files files into `node_modules/elm-taskport` directory. Once that is done, you can include TaskPort in your main JavaScript or TypeScript file.
+
+```js
+import TaskPort from 'elm-taskport';
+// use the following line instead of using a CommonJS target
+// const TaskPort = require('elm-taskport');
+```
 
 If you are developing an Elm application in an environment that does not have `XMLHttpRequest` in the global namespace (e.g. Node.js), you would need to provide that as well, because that's required for TaskPort to work. TaskPort is tested with [xmlhttprequest](https://www.npmjs.com/package/xmlhttprequest) NPM package version 1.8.0, which is recommended.
 
 ```sh
-npm add --save xmlhttprequest@1.8.0 # or yarn add xmlhttprequest@1.8.0 --save
-```
-
-Once that is done, you can include TaskPort in your main JavaScript or TypeScript file.
-
-```js
-import TaskPort from 'elm-taskport';
+npm add --save elm-taskport xmlhttprequest@1.8.0 # or yarn add elm-taskport xmlhttprequest@1.8.0 --save
 ```
 
 ### 2. Install TaskPort
@@ -66,7 +68,7 @@ For browser-based Elm applications add a script to your HTML file to enable Task
 
 ```html
 <script>
-    TaskPort.install();
+    TaskPort.install(); // can pass a settings object as a parameter, see below
 
     // it may be the same script block where you initialise your Elm application 
 </script>
@@ -208,9 +210,11 @@ The following sections explain how to use TaskPort function namespaces. You can 
 
 ### Registering JavaScript interop functions in a namespace
 
-It is recommended to create a single `install` function that would register all JavaScript interop functions required for the package to work. That function would call `TaskPort.createNamespace()` function to create a new namespace, and register interop functions required by your Elm package in it.
+It is recommended to create a single `install` function that would register all JavaScript interop functions required for the package to work. That function would call `TaskPort.createNamespace()` function to create a new namespace, and register interop functions required by your Elm package in it. It is further recommended that the `install` function takes the TaskPort object as a parameter rather than attempting to find it in the global namespace, because the latter won't be compatible with the Node environment.
 
-TaskPort expects function namespaces to be called after Elm package names, but does not enforce any versioning schema. In most cases you would want to use your Elm package version number, but if you are wrapping a third-party JavaScript API, it may be sufficient to just use the API version.
+Note that if you are using a bundler like WebPack to create a minified build of the JavaScript code for your Elm package for direct inclusion via a script tag, make sure you don't bundle TaskPort itself (in WebPack use [externals](https://webpack.js.org/configuration/externals/)). Otherwise, application developers would be unable to use another Elm package relying on TaskPort or use TaskPort in the application.
+
+TaskPort expects function namespaces to be called after Elm package names, i.e. `author-name/package-name`, but does not enforce any versioning schema. In most cases you would want to use your Elm package version number, but if you are wrapping a third-party JavaScript API and or interop code is not changing very often, it may be sufficient to use a separate JS API version to improve developer experience of your Elm package by simplifying the upgrades.
 
 ```js
 export function install(TaskPort) {
@@ -231,14 +235,12 @@ getWidgetsCount : Task Int
 getWidgetsCount = callNoArgsNS
     { function = "getWidgetsCount" |> inNamespace "author/elm-package" "v1"
     , bodyDecoder = Json.Decode.int,
-    , errorDecoder = TaskPort.jsErrorDecoder
     }
 
 getWidgetNameByIndex : Int -> Task String
 getWidgetNameByIndex = callNS
     { function = "getWidgetNameByIndex" |> inNamespace "author/elm-package" "v1"
     , bodyDecoder = Json.Decode.string,
-    , errorDecoder = TaskPort.jsErrorDecoder,
     , argsEncoder = Json.Encode.int
     } -- notice currying here and returning a function taking Int and producing a Task
 
