@@ -34,7 +34,7 @@ import Json.Decode as JD
 import Http
 
 moduleVersion : String
-moduleVersion = "1.2.1"
+moduleVersion = "2.0.0"
 
 {-| Alias for `String` type representing a namespace for JavaScript interop functions.
 Namespaces are typically used by Elm package developers, and passed as a paramter to `QualifiedName`.

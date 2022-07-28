@@ -1,7 +1,7 @@
 import { URL_PREFIX, parseUrl } from "./url.js";
 import { Namespace } from './namespace.js';
 
-const MODULE_VERSION = "1.2.1";
+const MODULE_VERSION = "2.0.0";
 
 const DEFAULT_SETTINGS = {
   /** Whether TaskPort should log errors thrown by JavaScript functions to the console */
