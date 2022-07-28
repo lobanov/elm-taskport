@@ -72,22 +72,38 @@ For browser-based Elm applications add a script to your HTML file to enable Task
 </script>
 ```
 
-In order to use TaskPort in an environment that does not have `XMLHttpRequest` in the global namespace (e.g. Node.js), it must be provided before Elm runtime is initialized.
+In order to use TaskPort in an environment that does not have `XMLHttpRequest` in the global namespace (e.g. Node.js), it must be provided before Elm runtime is initialized. Note that this requires a CommonJS target and `require` directive, as Elm compiler itself cannot yet generate JS code that is compatible with ECMAScript modules.
 
 ```js
-import XMLHttpRequest from 'xmlhttprequest';
-// use the below line instead if building a CommonJS module
-// const { XMLHttpRequest } = require('xmlhttprequest');
+const TaskPort = require('elm-taskport');
+const { XMLHttpRequest } = require('xmlhttprequest');
 
 global.XMLHttpRequest = function() {
   XMLHttpRequest.call(this);
-  TaskPort.install(this);
+  TaskPort.install({}, this); // can pass a settings object as the first parameter, see below
 }
 
-// initialize your Elm application by calling Elm.<<main module>>.init
+// initialize your Elm application here by calling Elm.<<main module>>.init
 ```
 
-### 3. Register JavaScript functions for the interop
+Note that `XMLHttpRequest` instance is passed as the second parameter to the `install` function. This is necessary in Node.js because there is no `XMLHttpRequest` in the global context. If this parameter is omitted, TaskPort attempts to install itself to a prototype of `XMLHttpRequest` in the global namespace, which works in all browsers. 
+
+### 3. Configure TaskPort (optional)
+
+The first parameter of TaskPort `install` function is an object that provides additional configuration. At the moment the following properties are supported.
+
+* `logCallErrors` (boolean, default: `false`) whether TaskPort should log errors thrown by JavaScript functions to the console.
+* `logInteropErrors` (boolean, default: `true`) whether TaskPort should log errors occuring in the interop mechanism to the console.
+
+Example use of settings parameter:
+
+```html
+<script>
+    TaskPort.install({ logCallErrors: true, logInteropErrors: false });
+</script>
+```
+
+### 4. Register JavaScript functions for the interop
 
 Once TypePort is installed, you need to let it know what interop calls to expect and what to do when they are invoked.
 

@@ -3,6 +3,16 @@ import { Namespace } from './namespace.js';
 
 const MODULE_VERSION = "1.2.1";
 
+const DEFAULT_SETTINGS = {
+  /** Whether TaskPort should log errors thrown by JavaScript functions to the console */
+  logCallErrors: false,
+
+  /** Whether TaskPort should log errors occuring in the interop mechanism to the console */
+  logInteropErrors: true
+};
+
+var globalSettings = DEFAULT_SETTINGS;
+
 const defaultNamespace = new Namespace('unversioned');
 const namespaces = {};
 
@@ -41,8 +51,16 @@ function describeError(error) {
   }
 }
 
-/** Configure JavaScript environment on the current page to enable interop calls. */
-export function install(xhrProto) {
+/**
+ * Configure JavaScript environment in the current JavaScript context (e.g. web page) to enable interop calls.
+ * 
+ * @param {{ logErrors?: boolean } | undefined} settings additional parameters
+ * @param {XMLHttpRequest | undefined} xhrProto prototype of XHR to install TaskPort interceptor to (Node.js-only)
+ */
+export function install(settings, xhrProto) {
+  if (typeof settings === 'object') {
+    globalSettings = { ...DEFAULT_SETTINGS, ...settings };
+  }
   if (xhrProto === undefined) {
     xhrProto = XMLHttpRequest.prototype;
   }
@@ -151,7 +169,9 @@ export function install(xhrProto) {
       }
       const [status, message] = this.__elm_taskport_error;
 
-      console.error("Unable to execute an interop call with the URL " + this.__elm_taskport_url + ". " + message);
+      if (globalSettings.logInteropErrors) {
+        console.error("Unable to execute an interop call with the URL " + this.__elm_taskport_url + ". " + message);
+      }
 
       this.status = status;
       this.responseType = 'text';

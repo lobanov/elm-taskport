@@ -5,7 +5,7 @@ const { Elm } = require('./build/elm.js');
 
 global.XMLHttpRequest = function() {
   XMLHttpRequest.call(this);
-  TaskPort.install(this);
+  TaskPort.install({ logInteropErrors: false, logCallErrors: false }, this);
 }
 
 TaskPortFixture.register(TaskPort);
