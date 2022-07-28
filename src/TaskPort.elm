@@ -32,7 +32,6 @@ import Task
 import Json.Encode as JE
 import Json.Decode as JD
 import Http
-import Test exposing (..)
 
 moduleVersion : String
 moduleVersion = "1.2.1"
