@@ -1,6 +1,23 @@
 Changes
 =======
 
+## Version 2.0.0
+
+Released: 2022-07-28
+
+This release contains a few breaking API changes for TaskPort module aimed at improving developer experience and instilling emerging best practice as a default:
+1. All versions of `call` function now accept the details of the call using a record to improve code readability. The only parameter that is passed outside of the record is the actual call parameter encoded into JSON for the interop call with a given `argsEncoder`.
+2. All versions of `call` function now decode errors returned by JavaScript code as a `JSError` value. For non-standard error objects, there is an escape hatch of `ErrorValue` variant, which contains a JSON value as-is.
+3. Variants of the `InteropError` type have changed. In the unlikely case you have built a logic to deal with the variants, it would need to be updated to use new names.
+
+**Upgrading from 1.2.x:**
+1. Change all invocations of `call` and `callNoArgs` to use record syntax and remove `errorDecoder` parameter. See package documentation for examples.
+2. If you have custom JavaScript error decoder, it will no longer work, as TaskPort always decodes JS Error as a value of type `JSError`. You need to change your error handling code to use `JSError`. If your JavaScript code returns non-standard errors, use the escape hatch of `ErrorValue` variant.
+
+Other changes:
+* Removed embedded Elm test suite, as all the same cases are covered end-to-end.
+* Added an ability to control if TaskPort will log JS and interop errors to the JS console.
+
 ## Version 1.2.1
 
 Released: 2022-07-23
