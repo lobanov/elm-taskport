@@ -265,3 +265,12 @@ type Msg = GotWidgets (Result (Error JSError) (List String))
 
 Task.attempt GotWidgets WidgetModules.getWidgetNames -- produces a Cmd
 ```
+
+Getting support
+---------------
+
+For questions or general enquiries feel free to tag or DM `@lobanov` on [Elm Slack](https://elmlang.slack.com/).
+
+For issues or suggestions please raise an issue on GitHub.
+
+PRs are welcome.
