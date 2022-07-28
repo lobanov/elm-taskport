@@ -132,12 +132,14 @@ TaskPort wraps each call of JavaScript functions into a [Task](https://package.e
 
 For simple no-argument calls use `TaskPort.callNoArgs`.
 ```elm
+-- TaskPort.Task is an alias for Task TaskPort.Error a
 getWidgetsCount : TaskPort.Task Int
 getWidgetsCount = TaskPort.callNoArgs 
     { function = "getWidgetsCount"
     , valueDecoder = Json.Decode.int
     }
 
+-- TaskPort.Result is an alias for Result TaskPort.Error a
 type Msg = GotWidgetsCount (TaskPort.Result Int)
 
 Task.attempt GotWidgetsCount getWidgetsCount
@@ -229,7 +231,9 @@ export function install(TaskPort) {
 Instead of using `call` or `callNoArgs` functions directly, Elm packages should use namespace-aware versions of those functions: `callNS` and `callNoArgsNS` respectively. Note that Elm packages are unlikely need to go beyond creating a `Task` for the interop call (potentially chained with other tasks with `Task.andThen`) and returning them to the application code.
 
 ```elm
-import TaskPort exposing (Task, Error, JSError, callNS, callNoArgsNS, inNamespace)
+import TaskPort exposing (Task, callNS, callNoArgsNS, inNamespace)
+
+-- TaskPort.Task is an alias for Task TaskPort.Error a
 
 getWidgetsCount : Task Int
 getWidgetsCount = callNoArgsNS
@@ -259,9 +263,11 @@ Elm application developer using a package providing this hypothetical API would 
 
 ```elm
 import WidgetModules -- Elm package exposing the above functions
-import TaskPort exposing (Error, JSError)
+import TaskPort exposing (Result)
 
-type Msg = GotWidgets (Result (Error JSError) (List String))
+-- TaskPort.Result is an alias for Result TaskPort.Error a
+
+type Msg = GotWidgets (Result (List String))
 
 Task.attempt GotWidgets WidgetModules.getWidgetNames -- produces a Cmd
 ```
