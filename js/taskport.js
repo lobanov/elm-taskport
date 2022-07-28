@@ -95,7 +95,7 @@ export function install(settings, xhrProto) {
           if (fn !== undefined) {
             this.__elm_taskport_function = fn;
           } else {
-            this.__elm_taskport_error = [ 404, `Cannot find function '${functionName} in the default namespace. `
+            this.__elm_taskport_error = [ 404, `Cannot find function '${functionName}' in the default namespace. `
               + `The default namespace has the following functons registered:\n`
               + defaultNamespace.names().join("\n") ]
           }
@@ -111,20 +111,20 @@ export function install(settings, xhrProto) {
               if (fn !== undefined) {
                 this.__elm_taskport_function = fn;
               } else {
-                this.__elm_taskport_error = [ 404, `Cannot find function '${functionName} in namespace ${namespaceName}. `
+                this.__elm_taskport_error = [ 404, `Cannot find function '${functionName}' in namespace ${namespaceName}. `
                   + `This namespace has only the following functons registered with it:\n`
                   + ns.names().join("\n") ];
               }
 
             } else {
-              this.__elm_taskport_error = [ 400, `The interop call expected namespace ${namespaceName} to have version ${namespaceVersion}, `
-                + `but it is registered with version ${ns.version}. `
+              this.__elm_taskport_error = [ 400, `The interop call expected namespace '${namespaceName}' to have version '${namespaceVersion}', `
+                + `but it is registered with version '${ns.version}'. `
                 + `Did you update the Elm package to a new version, but forgot to update the JavaScript code it requires?` ];
             }
 
           } else {
             const knownNamespaces = Object.keys(namespaces);
-            this.__elm_taskport_error = [ 404, `Namespace ${namespaceName} is not registered with TaskPort. `
+            this.__elm_taskport_error = [ 404, `Namespace '${namespaceName}' is not registered with TaskPort. `
               + `Did you follow the instructions to install required JavaScript code for the package? `
               + (knownNamespaces.length == 0)? `There are no namespaces registered with TaskPort.` :
                 `Only the following namespaces are known to TaskPort:\n` + knownNamespaces.join("\n") ]
