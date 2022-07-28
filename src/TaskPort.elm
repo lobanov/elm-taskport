@@ -118,8 +118,8 @@ Interop calls can fail for various reasons:
 * `NotInstalled`: JavaScript companion code responsible for TaskPort operations is missing or not working correctly,
 which means that no further interop calls can succeed.
 * `NotFound`: TaskPort was unable to find a registered function name, which means that no further calls to that function can succeed.
-String value will contain further details of the error.
-* `NotCompatible`: JavaScript and Elm code are not compatible. String value will contain further details of the error.
+String value will contain the function name.
+* `NotCompatible`: JavaScript and Elm code are not compatible. String value will contain the function name.
 * `CannotDecodeValue`: value returned by the JavaScript function cannot be decoded with a given JSON decoder.
 String value will contain the returned value verbatim, and `Json.Decode.Error` will contain the error details.
 * `RuntimeError`: some other unexpected failure of the interop mechanism. String value will contain further details of the error.
