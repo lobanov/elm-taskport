@@ -15,6 +15,7 @@ This release contains a few breaking API changes for TaskPort module aimed at im
 2. If you have custom JavaScript error decoder, it will no longer work, as TaskPort always decodes JS Error as a value of type `JSError`. You need to change your error handling code to use `JSError`. If your JavaScript code returns non-standard errors, use the escape hatch of `ErrorValue` variant.
 
 Other changes:
+* Added support for function namespaces allowing Elm package developer to avoid function name clashes and helping to keep JS and Elm code in sync.
 * Removed embedded Elm test suite, as all the same cases are covered end-to-end.
 * Added an ability to control if TaskPort will log JS and interop errors to the JS console.
 
