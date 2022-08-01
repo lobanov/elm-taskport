@@ -51,7 +51,7 @@ npm add --save elm-taskport # or yarn add elm-taskport --save
 This will bring all necessary JavaScript files files into `node_modules/elm-taskport` directory. Once that is done, you can include TaskPort in your main JavaScript or TypeScript file.
 
 ```js
-import TaskPort from 'elm-taskport';
+import * as TaskPort from 'elm-taskport';
 // use the following line instead of using a CommonJS target
 // const TaskPort = require('elm-taskport');
 ```
